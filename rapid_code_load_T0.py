@@ -315,8 +315,11 @@ def load_BSE_data(filepath, metallicity):
             names=cols
         )
 
-    if (dat.iloc[0] == cols).all():
-        dat = dat[1:]
+    if type(dat.iloc[0].UID) == str:
+        dat = pd.read_csv(filepath, delim_whitespace=True,
+        names=cols, header=1
+        )
+        
     dat["semiMajor"] = ((dat.period/365.25)**2 * (dat.mass1 + dat.mass2))**(1/3) * 214.94
     if "eccentricity" not in dat.columns:
         dat["eccentricity"] = np.zeros(len(dat))
