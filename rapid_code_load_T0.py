@@ -176,7 +176,7 @@ def Eggleton_Roche_lobe(q, sep):
 
     Roche_lobe = sep * Roche_fac
     return Roche_lobe
-    
+
 
 def load_SeBa_data(filepath, metallicity):
     """Read in SeBa data and select at DWD formation
@@ -588,6 +588,7 @@ class COMPAS_UCB_Events(object):
         
         self.all_UCB_events = df                                        # Convert back from df
         self.update_header()                                            # Update the header with new information
+        self.all_UCB_events = self.all_UCB_events.reset_index(drop=True)
         return self.all_UCB_events
 
     def verifyAndConvertCompasDataToUcbUsingDict(self, compasData, conversionDict):
