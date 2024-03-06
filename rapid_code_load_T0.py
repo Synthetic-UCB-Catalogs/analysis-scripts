@@ -551,8 +551,8 @@ class COMPAS_UCB_Events(object):
                         stellarType1=None, mass1=None, radius1=None, teff1=None, massHeCore1=None, 
                         scrapSeeds=None):
         columns   = [  "UID", "time", "event", "semiMajor", "eccentricity", 
-                       "stellarType1", "mass1", "radius1", "teff1", "massHeCore1", 
-                       "stellarType2", "mass2", "radius2", "teff2", "massHeCore2", 
+                       "type1", "mass1", "radius1", "Teff1", "massHeCore1", 
+                       "type2", "mass2", "radius2", "Teff2", "massHeCore2", 
                        "scrapSeeds" ] 
         data_list = [   uid,   time,   event,   semiMajor,   eccentricity, 
                         stellarType1,   mass1,   radius1,   teff1,   massHeCore1, 
