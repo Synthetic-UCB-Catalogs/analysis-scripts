@@ -568,7 +568,7 @@ class COMPAS_UCB_Events(object):
         else:
             self.all_UCB_events = pd.concat([self.all_UCB_events, new_events])
 
-    def getEvents(self):
+    def getEvents(self): 
 
 
         df = self.all_UCB_events                                        # Convert to df for convenience
@@ -841,16 +841,19 @@ class COMPAS_UCB_Events(object):
         2:  9, # error
         3:  1, # max time reached
         4:  1, # max timesteps reached, kind of the same as above
-        5:  9, # error
-        6:  9, # error
-        7:  -1, # time exceeded dco merger time?
-        8:  -1, # stars touching ?
-        9:  4, # merger
-        10: 4, # merger
-        11: 2, # dco formed
-        12: 2, # dwd formed
-        13: 4, # massless remnant
-        14: 3, # unbound    
+        5: -1, # no timesteps?
+        6: -1, # timesteps exhausted?
+        7: -1, # timesteps not consumed?
+        8:  9, # error
+        9:  9, # error
+        10:  -1, # time exceeded dco merger time?
+        11:  -1, # stars touching ?
+        12:  4, # merger
+        13: 4, # merger
+        14: 2, # dco formed
+        15: 2, # dwd formed
+        16: 4, # massless remnant
+        17: 3, # unbound    
     }
     
     # -1 applies if the compas output description is unclear, just toss these seeds for now.
@@ -899,7 +902,7 @@ class COMPAS_UCB_Events(object):
         massHeCore2 = SP["Mass_He_Core(2)"][()]
         stellarType1 = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Stellar_Type(1)"][()], self.compasStellarTypeToUCBdict)
         stellarType2 = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Stellar_Type(2)"][()], self.compasStellarTypeToUCBdict)
-        
+
         # Indirect output
         evolStatus = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Evolution_Status"][()], self.compasOutcomeToUCBdict)
         assert np.all(np.in1d(evolStatus, np.array([1, 2, 3, 4, 5, 9, -1]))) 
@@ -915,6 +918,8 @@ class COMPAS_UCB_Events(object):
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
                          stellarType2=stellarType2, mass2=mass2, radius2=radius2, teff2=teff2, massHeCore2=massHeCore2,
                          scrapSeeds=scrapSeeds)
+
+load_COMPAS_data('../standardizationToolForCOMPAS/my_binaryRun/COMPAS_Output/COMPAS_Output.h5')
 
 
 
