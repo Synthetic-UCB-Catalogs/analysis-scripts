@@ -180,7 +180,7 @@ def Eggleton_Roche_lobe(q, sep):
 
 def load_SeBa_data(filepath, metallicity):
     """Read in SeBa data and select at DWD formation
-    
+
     Parameters
     ----------
     filepath : `str`
@@ -190,12 +190,12 @@ def load_SeBa_data(filepath, metallicity):
     -------
     dat : `pandas.DataFrame`
         all data in T0 format
-        
+
     header : `pandas.DataFrame`
         header for dat
     """
     # load data
-    dat = pd.read_csv(filepath, sep=" ", 
+    dat = pd.read_csv(filepath, sep="\s+",
         names=["UID", "SID", "mass_transfer_type", "time", "semiMajor", "eccentricity",
                "stellar_indentity1", "star_type1", "mass1", "radius1", "Teff1", "massHeCore1",
                "stellar_indentity2", "star_type2", "mass2", "radius2", "Teff2", "massHeCore2"])
@@ -209,7 +209,7 @@ def load_SeBa_data(filepath, metallicity):
     UID_counts = dat.UID.value_counts().sort_index()
     dat['ID'] = np.repeat(ID, UID_counts)
 
-    # convert star_types to L0 
+    # convert star_types to L0
     dat["type1"] = np.zeros(len(dat))
     dat["type2"] = np.zeros(len(dat))
 
@@ -228,7 +228,7 @@ def load_SeBa_data(filepath, metallicity):
     dat.loc[dat.star_type1 == 18, "type1"] = 3
     dat.loc[dat.star_type1 == 19, "type1"] = 4
     dat.loc[dat.star_type1 == 20, "type1"] = -1
-    
+
     dat.loc[dat.star_type2 == 1, "type2"] = 5
     dat.loc[dat.star_type2 == 2, "type2"] = 6
     dat.loc[dat.star_type2 == 3, "type2"] = 121
@@ -245,24 +245,30 @@ def load_SeBa_data(filepath, metallicity):
     dat.loc[dat.star_type2 == 19, "type2"] = 4
     dat.loc[dat.star_type2 == 20, "type2"] = -1
 
-    
+
     dat["event"] = np.zeros(len(dat))
     # convert mass transfer events to L0 events
+
+    #### Should only use SID for these collections
     dat.loc[dat.time == 0.0, "event"] = -1
     dat.loc[(dat.star_type1.shift() < dat.star_type1), "event"] = 11
     dat.loc[(dat.star_type2.shift() < dat.star_type2), "event"] = 12
     dat.loc[(dat.SID == 3) & (dat.RRLO_1 > 1), "event"] = 31
     dat.loc[(dat.SID == 3) & (dat.RRLO_2 > 1), "event"] = 32
-    dat.loc[(dat.mass_transfer_type.isin([1,2,3])) & (dat.SID == 3), "event"] = 41
-    dat.loc[(dat.mass_transfer_type.isin([1,2,3])) & (dat.SID == 3), "event"] = 42
-    dat.loc[(dat.mass_transfer_type.isin([4,5])) & (dat.SID.isin([4,5,9])), "event"] = 511
-    dat.loc[(dat.mass_transfer_type.isin([4,5])) & (dat.SID.isin([4,5,9])), "event"] = 512
-    dat.loc[(dat.SID == 4), "event"] = 53
-    dat.loc[(dat.SID == 7), "event"] = 52
-    dat.loc[(dat.SID.isin([5, 9])) & (dat.RRLO_1 > 1), "event"] = 511
-    dat.loc[(dat.SID.isin([5, 9])) & (dat.RRLO_2 > 1), "event"] = 512
-    dat.loc[(dat.SID == 9), "event"] = 5
+
+    dat.loc[(dat.event.shift() == 31) & (dat.SID == 2), "event"] = 41
+    dat.loc[(dat.event.shift() == 32) & (dat.SID == 2), "event"] = 42
+
+    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_1 > 1), "event"] = 511
+    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_2 > 1), "event"] = 512
     dat.loc[(dat.SID == 6), "event"] = 513
+
+    # 4 is contact
+    dat.loc[(dat.SID == 4), "event"] = 53
+
+    # 7 is a merger
+    dat.loc[(dat.SID == 7), "event"] = 52
+
     dat.loc[(dat.time == max(dat.time)), "event"] = 81
     dat.loc[(dat.time == max(dat.time)) & (dat.star_type1 > 11) & (dat.star_type2 > 11), "event"] = 82
     dat.loc[(dat.time == max(dat.time)) & (dat.semiMajor == 0.0), "event"] = 84
@@ -273,16 +279,16 @@ def load_SeBa_data(filepath, metallicity):
                "mass1","radius1","Teff1","massHeCore1",
                "type2","mass2","radius2","Teff2","massHeCore2"]]
 
-    header_info = {"cofVer" : 1.0, 
+    header_info = {"cofVer" : 1.0,
                    "cofLevel": "L0",
-                   "cofExtension": "None", 
+                   "cofExtension": "None",
                    "bpsName": "SeBa",
-                   "bpsVer": "XX", 
-                   "contact": "toonen@uva.nl", 
-                   "NSYS": len(dat.UID.unique()), 
+                   "bpsVer": "XX",
+                   "contact": "toonen@uva.nl",
+                   "NSYS": len(dat.UID.unique()),
                    "NLINES": len(dat),
                    "Z": metallicity}
-                       
+
     header = pd.DataFrame.from_dict([header_info])
     return dat, header
 
