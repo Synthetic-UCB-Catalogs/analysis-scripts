@@ -944,30 +944,22 @@ class COMPAS_UCB_Events(object):
         eccentricity = SP["Eccentricity@ZAMS"][()]
         mass1 = SP["Mass@ZAMS(1)"][()]
         mass2 = SP["Mass@ZAMS(2)"][()]
-        radius1 = SP["Radius@ZAMS(1)"][()] # TODO
-        radius2 = SP["Radius@ZAMS(2)"][()] # TODO
-        teff1 = SP["Teff@ZAMS(1)"][()] # TODO
-        teff2 = SP["Teff@ZAMS(2)"][()] # TODO
+        radius1 = SP["Radius@ZAMS(1)"][()] 
+        radius2 = SP["Radius@ZAMS(2)"][()]
+        teff1 = SP["Teff@ZAMS(1)"][()] 
+        teff2 = SP["Teff@ZAMS(2)"][()]
         massHeCore1 = np.zeros_like(uid) 
         massHeCore2 = np.zeros_like(uid) 
         stellarType1 = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Stellar_Type@ZAMS(1)"][()], self.compasStellarTypeToUCBdict)
         stellarType2 = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Stellar_Type@ZAMS(2)"][()], self.compasStellarTypeToUCBdict)
 
         # Indirect output
-        evolStatus = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Evolution_Status"][()], self.compasOutcomeToUCBdict)
-        assert np.all(np.in1d(evolStatus, np.array([1, 2, 3, 4, 5, 9, -1]))) 
-        scrapSeeds = evolStatus == -1 # -1 means I don't understand the compas outcome
-        if self.testing:
-            if np.any(scrapSeeds):
-                print("There were {} strange evolutionary outcomes".format(np.sum(scrapSeeds)))
-                print("Their seeds were:")
-                print("[" + ", ".join(uid[scrapSeeds].astype(str)) + "]")
-        event = 8*10 + evolStatus
+        event = 13  # Both stars change stellar type - kind of true
         
         self.addEvents(  uid=uid, time=time, event=event, semiMajor=semiMajorAxis, eccentricity=eccentricity, 
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
                          stellarType2=stellarType2, mass2=mass2, radius2=radius2, teff2=teff2, massHeCore2=massHeCore2,
-                         scrapSeeds=scrapSeeds)
+                         scrapSeeds=None)
 
 
 
