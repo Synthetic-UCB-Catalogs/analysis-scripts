@@ -566,8 +566,12 @@ class COMPAS_UCB_Events(object):
                         scrapSeeds   ] 
     
         # Want to enter data using name keywords, but all of them are required
-        if np.any([ ii is None for ii in data_list ]):
-            raise Exception("Can't skip any of the required input values. Currently missing {}".format(columns[ii]))
+        bad_params = []
+        for ii, param in enumerate(data_list):
+            if param is None:
+                bad_params.append(columns[ii])
+        if len(bad_params) > 0:
+            raise Exception("Can't skip any of the required input values. Currently missing: {}".format(', '.join(bad_params)))
         new_events = pd.DataFrame(np.vstack(data_list).T, columns=columns)    
         if self.all_UCB_events is None:
             self.all_UCB_events = new_events
@@ -954,12 +958,13 @@ class COMPAS_UCB_Events(object):
         stellarType2 = self.verifyAndConvertCompasDataToUcbUsingDict(SP["Stellar_Type@ZAMS(2)"][()], self.compasStellarTypeToUCBdict)
 
         # Indirect output
-        event = 13  # Both stars change stellar type - kind of true
+        scrapSeeds = uid < 0 # dummy value, should be all False
+        event = 13*np.ones_like(uid)  # Both stars change stellar type - kind of true
         
         self.addEvents(  uid=uid, time=time, event=event, semiMajor=semiMajorAxis, eccentricity=eccentricity, 
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
                          stellarType2=stellarType2, mass2=mass2, radius2=radius2, teff2=teff2, massHeCore2=massHeCore2,
-                         scrapSeeds=None)
+                         scrapSeeds=scrapSeeds)
 
 
 
