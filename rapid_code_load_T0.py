@@ -944,7 +944,7 @@ class COMPAS_UCB_Events(object):
         # Direct output
         uid = SP["SEED"][()]
         time = np.zeros_like(uid)
-        semiMajorAxis = SP["SemiMajorAxis@ZAMS"][()]
+        semiMajorAxis = SP["SemiMajorAxis@ZAMS"][()]*215.032 # Rsol
         eccentricity = SP["Eccentricity@ZAMS"][()]
         mass1 = SP["Mass@ZAMS(1)"][()]
         mass2 = SP["Mass@ZAMS(2)"][()]
