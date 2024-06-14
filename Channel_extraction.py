@@ -22,6 +22,11 @@ from matplotlib.gridspec import SubplotSpec
 import h5py as h5
 import tarfile
 
+import formation_channels as fc
+# -
+
+
+
 
 # + colab={"base_uri": "https://localhost:8080/"} id="q1cShMsXHZ9n" executionInfo={"status": "ok", "timestamp": 1716398731600, "user_tz": 240, "elapsed": 19009, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}} outputId="9735f1f2-99ee-4bb2-b38b-a4341eb77bfc"
 from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data
@@ -32,57 +37,19 @@ COSMIC = 'data/basic.h5'
 
 
 # + id="x8tGcq__Hurt" executionInfo={"status": "ok", "timestamp": 1716398821262, "user_tz": 240, "elapsed": 53936, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-COSMIC_full, s_header = load_COSMIC_data(COSMIC, metallicity=0.02)
-
-# + id="WPauZbOHQQAH" executionInfo={"status": "ok", "timestamp": 1716398821262, "user_tz": 240, "elapsed": 13, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-d = COSMIC_full
-
-# + id="KsQAhB7YMzNj" executionInfo={"status": "ok", "timestamp": 1716398821262, "user_tz": 240, "elapsed": 1, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-COSMIC_full = []
-
-
-# + id="ZBBAbpvae-hK" executionInfo={"status": "ok", "timestamp": 1716398834787, "user_tz": 240, "elapsed": 151, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-def select_ZAMS_WDMS_DWD(d):
-    '''Selects the WDMS and DWD populations at the formation of the first and second white dwarfs
-
-    Params
-    ------
-    d : `pandas.DataFrame`
-        contains T0 data for binaries as specified by BinCodex
-
-    Returns
-    -------
-    ZAMS : `pandas.DataFrame`
-        T0 columns for Zero Age Main Sequence binaries
-
-    WDMS : `pandas.DataFrame`
-        T0 columns for WDMS binaries at the formation of the 1st WD
-
-    DWD : `pandas.DataFrame`
-        T0 columns for DWD binaries at the formation of the 2nd WD
-    '''
-
-    ZAMS = d.groupby('ID', as_index=False).first()
-
-    WDMS1 = d.loc[((d.type1.isin([21,22,23]) & (d.type2 == 121))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
-    WDMS2 = d.loc[((d.type2.isin([21,22,23]) & (d.type1 == 121))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
-
-    WDMS = pd.concat([WDMS1, WDMS2])
-    DWD = d.loc[(d.type1.isin([21,22,23])) & (d.type2.isin([21,22,23])) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
-
-    return ZAMS, WDMS, DWD
-
+d, s_header = load_COSMIC_data(COSMIC, metallicity=0.02)
 
 # + id="H3IKg77vlbJk" executionInfo={"status": "ok", "timestamp": 1716398842489, "user_tz": 240, "elapsed": 7052, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-ZAMS, WDMS, DWD = select_ZAMS_WDMS_DWD(d=d)
+ZAMS, WDMS, DWD = fc.select_ZAMS_WDMS_DWD(d=d)
 
 # + colab={"base_uri": "https://localhost:8080/"} id="fRC_sgSqfogc" executionInfo={"status": "ok", "timestamp": 1716398842489, "user_tz": 240, "elapsed": 15, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}} outputId="515486e3-4d82-412e-b4b7-955db5eb1eca"
 print(len(ZAMS), len(WDMS), len(DWD), len(WDMS) + len(DWD), len(d.ID.unique()))
+# -
 
-# + colab={"base_uri": "https://localhost:8080/"} id="r0QJUyrVpnr9" executionInfo={"status": "ok", "timestamp": 1716398844266, "user_tz": 240, "elapsed": 427, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}} outputId="ffec38a0-ab91-452f-eebd-6b682a4d6511"
-RLO1_ID = d.loc[d.event == 31]
+ZAMS = []
+WDMS = []
+DWD = []
 
-RLO1_ID.ID.value_counts()
 
 # + id="6i_6qcGDpyq9"
 #dat = pd.read_csv(seba, sep="\s+",
@@ -91,6 +58,83 @@ RLO1_ID.ID.value_counts()
 #               "stellar_indentity2", "star_type2", "mass2", "radius2", "Teff2", "massHeCore2"])
 
 bpp = pd.read_hdf(COSMIC, key='bpp')
+# -
+
+RLO_1 = d.loc[d.event == 31].ID.unique()
+d.loc[d.ID.isin(RLO_1)]
+
+
+bpp.loc[(bpp.evol_type == 7) & (bpp.RRLO_1 > 1) & (bpp.RRLO_2 < 1)][['tphys', 'kstar_1', 'kstar_1', 'evol_type']]
+
+for r in RLO_1[:10]:
+    print(bpp.loc[bpp.bin_num==r][['mass_1', 'mass_2', 'RRLO_1', 'RRLO_2', 'evol_type', 'sep']])
+    print()
+    print(d.loc[d.ID == r][['mass1', 'mass2', 'type1', 'type2', 'event', 'semiMajor']])
+
+
+# +
+def single_event_select_ID(d, event):
+    single_event_select, = np.where(d.loc[d.event==event].ID.value_counts() == 1)
+    
+    IDs = d.loc[d.event==event].ID.value_counts().index
+
+    return IDs[single_event_select].values
+
+
+def multi_event_select_ID(d, events):
+    multi_event_select, = np.where(d.loc[d.event.isin(events)].ID.value_counts() > 1)
+    IDs = d.loc[d.event.isin(events)].ID.value_counts().index
+
+    return IDs[multi_event_select].values
+
+    
+def select_channels_simple(d):
+
+    RLO_all = d.loc[d.event.isin([31,32,511,512,513,53])]
+    No_RLO = d.loc[~d.ID.isin(RLO_all.ID)].ID.unique()
+
+    RLO_2 = RLO_all.loc[RLO_all.ID.value_counts() == 2]
+    
+    SMT1_CE1 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 31) & 
+                          (RLO_2.groupby('ID', as_index=False).nth(1).event.isin([511, 513, 53])))].ID.unique()
+    SMT2_CE2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 32) & 
+                          (RLO_2.groupby('ID', as_index=False).nth(1).event.isin([512, 513, 53])))].ID.unique()
+
+    other = np.append(SMT1_CE1, SMT2_CE2)
+    
+    # filter out the 
+    RLO_2 = RLO_2.loc[~(RLO_2.ID.isin(other))]
+    
+    SMT1_SMT2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 31) & 
+                           (RLO_2.groupby('ID', as_index=False).nth(1).event == 32))].ID.unique()
+    SMT1_CE2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 31) & 
+                           (RLO_2.groupby('ID', as_index=False).nth(1).event == 512))].ID.unique()
+    CE1_SMT2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 511) & 
+                          (RLO_2.groupby('ID', as_index=False).nth(1).event == 32))].ID.unique()
+    CE1_CE2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 511) & 
+                          (RLO_2.groupby('ID', as_index=False).nth(1).event == 512))].ID.unique()
+    
+    return No_RLO, SMT1_SMT2, SMT1_CE2, CE1_SMT2, CE1_CE2, other
+
+
+# -
+
+No_RLO, SMT1_SMT2, SMT1_CE2, CE1_SMT2, CE1_CE2, other = select_channels_simple(d)
+
+
+No_RLO
+
+dat_out = [No_RLO, SMT1_SMT2, SMT1_CE2, CE1_SMT2, CE1_CE2, SMT1_CE1, SMT2_CE2]
+IDs = []
+for ID in dat_out:
+    IDs.extend(ID)
+
+d.loc[d.ID.isin(IDs)]
+
+for r in SMT1_SMT2[:10]:
+    print(d.loc[d.ID == r][['mass1', 'mass2', 'type1', 'type2', 'event', 'semiMajor']])
+    print(bpp.loc[bpp.bin_num==r][['tphys', 'RRLO_1', 'RRLO_2','kstar_1', 'kstar_2', 'evol_type', 'sep']])
+    print()
 
 # + colab={"base_uri": "https://localhost:8080/", "height": 332} id="Tza_sJ08wpgN" executionInfo={"status": "ok", "timestamp": 1715795203673, "user_tz": 240, "elapsed": 20, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}} outputId="6add6558-b471-4ea7-df0c-c9ed513db682"
 bpp.loc[bpp.bin_num == 347673][['tphys', 'kstar_1', 'kstar_2', 'porb', 'evol_type']]

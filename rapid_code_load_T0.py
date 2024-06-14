@@ -67,17 +67,18 @@ def load_COSMIC_data(filepath, metallicity):
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 32
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 33
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_2.isin([7,9])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2.isin([7,9])), "event"] = 43
-    dat.loc[(dat.evol_type == 5), "event"] == 52
-    dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] == 52
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] == 511
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] == 512
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] == 513
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_2.isin([7,9])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2.isin([7,9])), "event"] = 43
+    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2 < 7), "event"] = 41
+    dat.loc[(dat.evol_type == 4) & (dat.kstar_2.isin([7,9,10])) & (dat.kstar_1 < 7), "event"] = 42
+    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2.isin([7,9,10])), "event"] = 43
+    dat.loc[(dat.evol_type == 5), "event"] = 53
+    dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] = 52
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 511
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 512
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 513
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_2.isin([7,9,10])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2.isin([7,9,10])), "event"] = 43
+    dat.loc[(dat.evol_type == 8) & (dat.semiMajor == 0.0), "event"] = 52
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_cc)), "event"] = 212
     dat.loc[(dat.evol_type == 16) & (dat.UID.isin(bn_2_cc)), "event"] = 222
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_ecsn)), "event"] = 213
@@ -133,6 +134,19 @@ def load_COSMIC_data(filepath, metallicity):
     ID = np.arange(0, len(dat.UID.unique()), 1)
     UID_counts = dat.UID.value_counts().sort_index()
     dat["ID"] = np.repeat(ID, UID_counts)
+
+    # drop the 3's for common envelopes
+    t_RL1 = dat.loc[dat.evol_type == 3].time.values
+    t_CE1 = dat.loc[dat.evol_type == 7].time.values
+    t_common1 = np.intersect1d(t_RL1, t_CE1)
+
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)))]
+
+    t_RL2 = dat.loc[dat.evol_type == 3].time.values
+    t_CE2 = dat.loc[dat.evol_type == 7].time.values
+    t_common2 = np.intersect1d(t_RL1, t_CE1)
+
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common2)))]
     
     dat = dat[["ID","UID","time","event",
                "semiMajor","eccentricity","type1",
