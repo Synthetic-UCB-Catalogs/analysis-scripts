@@ -139,7 +139,6 @@ def select_channels_simple(d):
 
     other_IDs = []
     for key in other.keys():
-        print(key)
         other_IDs.extend(other[key])
     other_IDs = np.unique(other_IDs)
    
@@ -154,5 +153,11 @@ def select_channels_simple(d):
                           (RLO_2.groupby('ID', as_index=False).nth(1).event == 32))].ID.unique()
     CE1_CE2 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 511) & 
                           (RLO_2.groupby('ID', as_index=False).nth(1).event == 512))].ID.unique()
-    
-    return No_RLO, SMT1_SMT2, SMT1_CE2, CE1_SMT2, CE1_CE2, other
+
+    channels = other
+    channels['SMT1_SMT2'] = SMT1_SMT2
+    channels['SMT1_CE2'] = SMT1_CE2
+    channels['CE1_SMT2'] = CE1_SMT2
+    channels['CE1_CE2'] = CE1_CE2
+    channels['No_RLO'] = No_RLO
+    return channels
