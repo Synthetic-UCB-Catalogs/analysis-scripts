@@ -4,7 +4,7 @@ import h5py as h5
 import rapid_code_load_T0 as load
 
 
-def select_ZAMS_WDMS_DWD(d):
+def select_evolutionary_states(d):
     '''Selects the WDMS and DWD populations at the formation of the first and second white dwarfs
 
     Parameters
@@ -34,8 +34,21 @@ def select_ZAMS_WDMS_DWD(d):
 
     return ZAMS, WDMS, DWD
 
+def select_final_state_ids(d):
+    '''Sets the final state based on the evolution
 
-def select_channels_simple(d):
+    Parameters
+    ----------
+    d : `pandas.DataFrame`
+        T0 data with all events listed
+
+    Returns
+    -------
+
+    '''
+    
+
+def select_channels(d):
     '''Selects out the simple channels with the primary and secondary
     undergoing combinations of stable mass transfer and common envelope
     in addition to systems which don't interact and 'other' systems
@@ -48,30 +61,74 @@ def select_channels_simple(d):
 
     Returns
     -------
-    No_RLO : `numpy.array`
-        an array containing the IDs of systems which do not go through RLO, 
+    channels : `Dictionary`
+        A dictionary with the following keys and items:
+        
+        SMT1_SMT1 : `numpy.array`
+            an array containing the IDs of systems which undergo 2 stable 
+            mass transfer events with both initiated by the primary
+        
+        SMT2_SMT2 : `numpy.array`
+            an array containing the IDs of systems which undergo 2 stable 
+            mass transfer events with both initiated by the secondary
     
-    SMT1_SMT2 : `numpy.array`
-        an array containing the IDs of systems which experience two 
-        stable mass transfer events
+        CE1_CE1 : `numpy.array`
+            an array containing the IDs of systems which undergo 2 common 
+            envelope events with both initiated by the primary
         
-    SMT1_CE2 : `numpy.array`
-        an array containing the IDs of systems which experience 
-        stable mass transfer from the primary and a common envelope 
-        from the secondary
+        CE2_CE2 : `numpy.array`
+            an array containing the IDs of systems which undergo 2 common 
+            envelope events with both initiated by the secondary
         
-    CE1_SMT2 : `numpy.array`
-        an array containing the IDs of systems which experience 
-        a common envelope from the primary and stable mass transfer
-        from the secondary
-    
-    CE1_CE2 : `numpy.array`
-        an array containing the IDs of systems which experience 
-        two common envelopes
+        CE1 : `numpy.array`
+            an array containing the IDs of systems which undergo 1 common 
+            envelope event initiated by the primary
+
+        CE2 : `numpy.array`
+            an array containing the IDs of systems which undergo 1 common 
+            envelope event initiated by the secondary
+
+        CE3 : `numpy.array`
+            an array containing the IDs of systems which undergo 1 common 
+            envelope event initiated by the primary & secondary at the 
+            same time
+
+        SMT1 : `numpy.array`
+            an array containing the IDs of systems which undergo 1 stable 
+            mass transfer event initiated by the primary
+
+        SMT2 : `numpy.array`
+            an array containing the IDs of systems which undergo 1 stable 
+            mass transfer event initiated by the secondary
+
+        RLO_3_or_more_other : `numpy.array`
+            an array containing the IDs of systems which undergo 3 or more
+            RLO events
         
-    other : `numpy.array`
-        an array containing the IDs of systems which interact 
-        don't experience any of the above channels
+        No_RLO : `numpy.array`
+            an array containing the IDs of systems which do not go through RLO, 
+        
+        SMT1_SMT2 : `numpy.array`
+            an array containing the IDs of systems which experience two 
+            stable mass transfer events
+            
+        SMT1_CE2 : `numpy.array`
+            an array containing the IDs of systems which experience 
+            stable mass transfer from the primary and a common envelope 
+            from the secondary
+            
+        CE1_SMT2 : `numpy.array`
+            an array containing the IDs of systems which experience 
+            a common envelope from the primary and stable mass transfer
+            from the secondary
+        
+        CE1_CE2 : `numpy.array`
+            an array containing the IDs of systems which experience 
+            two common envelopes
+            
+        other : `numpy.array`
+            an array containing the IDs of systems which interact 
+            don't experience any of the above channels
     '''
     d = d.loc[~((d.type1.isin([21,22,23])) & ((d.type2.isin([21,22,23]))))]
     RLO_all = d.loc[(d.event.isin([31,32,511,512,513,53]))]
@@ -109,6 +166,9 @@ def select_channels_simple(d):
     # don't evolve beyond the MS due to low masses)
     RLO_1 = RLO_all.loc[RLO_all.ID.value_counts() == 1]
     CE1 = d.loc[(d.ID.isin(RLO_1.ID)) & (d.event == 511)].ID.unique()
+    CE1_merge = d.loc[(d.ID.isin(CE1)) & (d.event == 52)].ID.unique()
+    CE1_survive = np.setxor1d(CE1, CE1_merge)
+    
     CE2 = d.loc[(d.ID.isin(RLO_1.ID)) & (d.event == 512)].ID.unique()
     CE3 = d.loc[(d.ID.isin(RLO_1.ID)) & (d.event == 513)].ID.unique()
 
@@ -116,9 +176,41 @@ def select_channels_simple(d):
     SMT2 = d.loc[(d.ID.isin(RLO_1.ID)) & (d.event == 32)].ID.unique()
 
 
-    RLO_3_or_more = RLO_all.loc[RLO_all.ID.value_counts() > 2].ID.unique()
+    # select the systems which go through SMT which evolves to CE based on Stellar evolution
+    RLO_3 = RLO_all.loc[RLO_all.ID.value_counts() == 3]
+    evCE1_SMT2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event.isin([511, 513, 53])) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event == 32))].ID.unique()
+    evCE1_CE2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event.isin([511])) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event.isin([512])))].ID.unique()
+    SMT1_evCE2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                               (RLO_3.groupby('ID', as_index=False).nth(1).event == 32) & 
+                               (RLO_3.groupby('ID', as_index=False).nth(2).event.isin([512, 513, 53])))].ID.unique()
+    CE1_evCE2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event.isin([511, 513, 53])) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event == 32) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event.isin([512, 513, 53])))].ID.unique()
+    SMT1_CE2_SMT2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event.isin([512, 513, 53])) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event == 32))].ID.unique()
+    SMT1_CE2_CE2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event.isin([512, 513, 53])) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event.isin([512, 513, 53])))].ID.unique()
+
+    SMT1_SMT1_CE2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(1).event == 31) & 
+                              (RLO_3.groupby('ID', as_index=False).nth(2).event.isin([512, 513, 53])))].ID.unique()
+    
+    bID3 = []
+    for d in [evCE1_SMT2, evCE1_CE2, SMT1_evCE2, CE1_evCE2, SMT1_CE2_SMT2, SMT1_CE2_CE2, SMT1_SMT1_CE2]:
+        bID3.extend(d)
+    RLO_3_other = RLO_3.loc[~RLO_3.ID.isin(bID3)].ID.unique()
+
+    
+    
+    RLO_4_or_more_other = RLO_all.loc[RLO_all.ID.value_counts() > 3].ID.unique()
     # select systems which merge due to failed CE
-    failed_CE = d.loc[d.event == 52].ID.unique()
+    #failed_CE = d.loc[d.event == 52].ID.unique()
     
     
     other = {'SMT1_SMT1' : SMT1_SMT1,
@@ -129,13 +221,22 @@ def select_channels_simple(d):
              'SMT2_CE2' : SMT2_CE2,
              'CE1_SMT1' : CE1_SMT1,
              'CE2_SMT2' : CE2_SMT2,
-             'CE1' : CE1,
+             'CE1_merge' : CE1_merge,
+             'CE1_survive' : CE1_survive,
              'CE2' : CE2,
              'CE3' : CE3,
              'SMT1' : SMT1,
              'SMT2' : SMT2,
-             'RLO_3_or_more' : RLO_3_or_more,
-             'failed_CE' : failed_CE}
+             'evCE1_SMT2' : evCE1_SMT2,
+             'evCE1_CE2' : evCE1_CE2,
+             'SMT1_evCE2' : SMT1_evCE2,
+             'CE1_evCE2' : CE1_evCE2,
+             'SMT1_CE2_SMT2' : SMT1_CE2_SMT2,
+             'SMT1_CE2_CE2' : SMT1_CE2_CE2,
+             'SMT1_SMT1_CE2' : SMT1_SMT1_CE2,
+             'RLO_3_other' : RLO_3_other,
+             'RLO_4_or_more_other' : RLO_4_or_more_other}#,
+    #         #'failed_CE' : failed_CE}
 
     other_IDs = []
     for key in other.keys():

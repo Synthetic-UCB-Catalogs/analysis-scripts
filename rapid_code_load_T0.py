@@ -62,23 +62,23 @@ def load_COSMIC_data(filepath, metallicity):
     # convert evol_type to event
     dat["event"] = np.zeros(len(dat))
     dat.loc[dat.evol_type == 1, "event"] = -1
-    dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() < dat.kstar_1), "event"] = 11
-    dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
+    dat.loc[(dat.evol_type.isin([2,11])) & (dat.kstar_1.shift() < dat.kstar_1), "event"] = 11
+    dat.loc[(dat.evol_type.isin([2,11])) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 32
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 33
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2 < 7), "event"] = 41
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_2.isin([7,9,10])) & (dat.kstar_1 < 7), "event"] = 42
+    dat.loc[(dat.RRLO_1.shift() > 1) & (dat.RRLO_1 < 1) & (dat.evol_type == 4), "event"] = 41
+    dat.loc[(dat.RRLO_2.shift() > 1) & (dat.RRLO_2 < 1) & (dat.evol_type == 4), "event"] = 42
     dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2.isin([7,9,10])), "event"] = 43
     dat.loc[(dat.evol_type == 5), "event"] = 53
     dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] = 52
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 511
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 513
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_2.isin([7,9,10])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9,10])) & (dat.kstar_2.isin([7,9,10])), "event"] = 43
-    dat.loc[(dat.evol_type == 8) & (dat.semiMajor == 0.0), "event"] = 52
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,8,9,10])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_2.isin([7,8,9,10])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,8,9,10])) & (dat.kstar_2.isin([7,8,9,10])), "event"] = 43
+    dat.loc[(dat.evol_type == 8) & (dat.semiMajor <= 0.0), "event"] = 52
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_cc)), "event"] = 212
     dat.loc[(dat.evol_type == 16) & (dat.UID.isin(bn_2_cc)), "event"] = 222
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_ecsn)), "event"] = 213
@@ -136,17 +136,22 @@ def load_COSMIC_data(filepath, metallicity):
     dat["ID"] = np.repeat(ID, UID_counts)
 
     # drop the 3's for common envelopes
-    t_RL1 = dat.loc[dat.evol_type == 3].time.values
-    t_CE1 = dat.loc[dat.evol_type == 7].time.values
+    CE1_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1)].ID
+    t_RL1 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE1_IDs))].time.values
+    t_CE1 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE1_IDs))].time.values
     t_common1 = np.intersect1d(t_RL1, t_CE1)
 
-    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)))]
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)) & (dat.ID.isin(CE1_IDs)))]
 
-    t_RL2 = dat.loc[dat.evol_type == 3].time.values
-    t_CE2 = dat.loc[dat.evol_type == 7].time.values
-    t_common2 = np.intersect1d(t_RL1, t_CE1)
+    CE2_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_2 > 1)].ID
+    t_RL2 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE2_IDs))].time.values
+    t_CE2 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE2_IDs))].time.values
+    t_common2 = np.intersect1d(t_RL2, t_CE2)
 
-    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common2)))]
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common2)) & (dat.ID.isin(CE2_IDs)))]
+    
+    # drop the 41's for common envelopes
+    dat = dat.loc[~((dat.event == 41) & (dat.event.shift() == 41))]
     
     dat = dat[["ID","UID","time","event",
                "semiMajor","eccentricity","type1",
