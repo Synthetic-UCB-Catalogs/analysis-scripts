@@ -23,10 +23,21 @@ import h5py as h5
 import tarfile
 
 import formation_channels as fc
-from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data
+from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data, load_T0_data
 # -
 COSMIC = 'data/basic.h5'
 d, s_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+
+# +
+#ComBinE = 'data/MC_sample_ecc_thermal_CommonOutputFormat.csv'
+#d, header = load_T0_data(filepath=ComBinE, code='ComBinE')
+
+# +
+#for ii in d.ID[::500000]:
+#    print(d.loc[d.ID == ii])
+# -
+
+
 
 ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
 channels = fc.select_channels(d=d)
@@ -47,11 +58,14 @@ duplicates = [item for item, count in collections.Counter(IDs).items() if count 
 # -
 
 
-for k in channels.keys():
-    IDs = channels[k]
-    i = np.intersect1d(IDs, duplicates)
-    if len(i) > 0:
-        print(k, len(i))
+duplicates
+
+# +
+#for k in channels.keys():
+#    IDs = channels[k]
+#    i = np.intersect1d(IDs, duplicates)
+#    if len(i) > 0:
+#        print(k, len(i))
 
 # +
 init_05 = ZAMS.loc[(np.round(ZAMS.mass2/ZAMS.mass1, 2) == 0.49)]
@@ -62,6 +76,11 @@ init_09 = ZAMS.loc[(np.round(ZAMS.mass2/ZAMS.mass1, 2) == 0.88) & (ZAMS.mass1.is
 
 for c in channels.keys():
     print(c, len(init_05.loc[init_05.ID.isin(channels[c])]))
+
+# +
+#for ID in channels['RLO_3_other']:
+#    print(d.loc[d.ID == ID][['time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor']])
+# -
 
 for c in channels.keys():
     print(c, len(init_09.loc[init_09.ID.isin(channels[c])]))
@@ -81,7 +100,7 @@ SMT_colors = cmr.take_cmap_colors('cmr.sapphire', len(SMT_keys), cmap_range=(0.4
 CE_colors = cmr.take_cmap_colors('cmr.sunburst', len(CE_keys), cmap_range=(0.3, 0.9), return_fmt='hex')
 mixed_colors_2 = cmr.take_cmap_colors('cmr.nuclear', len(mixed_keys_2), cmap_range=(0.15, 0.95), return_fmt='hex')
 mixed_colors_3 = cmr.take_cmap_colors('cmr.horizon', len(mixed_keys_3), cmap_range=(0.15, 0.95), return_fmt='hex')
-other_colors = cmr.take_cmap_colors('cmr.bubblegum', len(other_keys), cmap_range=(0.35, 0.85), return_fmt='hex')
+other_colors = cmr.take_cmap_colors('cmr.neutral', len(other_keys), cmap_range=(0.35, 0.85), return_fmt='hex')
 
 keys_list = [SMT_keys, CE_keys, mixed_keys_2, mixed_keys_3, other_keys]
 colors_list = [SMT_colors, CE_colors, mixed_colors_2, mixed_colors_3, other_colors]
@@ -156,7 +175,7 @@ plt.show()
 bpp = pd.read_hdf('data/basic.h5', key='bpp')
 # -
 
-for id in channels['RLO_3_other'][:10]:
+for id in channels['evCE1_CE2'][:10]:
     print(d.loc[d.ID == id][['time', 'mass1', 'mass2', 'type1', 'type2', 'semiMajor', 'event']])
     print(bpp.loc[bpp.bin_num == id][['tphys', 'mass_1', 'mass_2', 'kstar_1', 'kstar_2', 'evol_type']])
 

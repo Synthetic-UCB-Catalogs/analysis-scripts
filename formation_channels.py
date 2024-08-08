@@ -46,7 +46,7 @@ def select_final_state_ids(d):
     -------
 
     '''
-    
+
 
 def select_channels(d):
     '''Selects out the simple channels with the primary and secondary
@@ -134,7 +134,10 @@ def select_channels(d):
     RLO_all = d.loc[(d.event.isin([31,32,511,512,513,53]))]
     No_RLO = d.loc[~d.ID.isin(RLO_all.ID)].ID.unique()
 
-    RLO_2 = RLO_all.loc[RLO_all.ID.value_counts() == 2]
+    #RLO_2 = RLO_all.loc[RLO_all.ID.value_counts() == 2]
+    ind_RLO_2 = np.where(RLO_all.ID.value_counts() == 2, RLO_all.ID.value_counts().index, -1)
+    ind_RLO_2 = ind_RLO_2[ind_RLO_2 >= 0]
+    RLO_2 = RLO_all.loc[RLO_all.ID.isin(ind_RLO_2)]
 
     # select systems with SMT that shifts to CE based on donor evolution
     SMT1_CE1 = RLO_2.loc[((RLO_2.groupby('ID', as_index=False).nth(0).event == 31) & 
@@ -164,7 +167,10 @@ def select_channels(d):
     # select out single mass transfers (these are likely to be CE becuase
     # the single mass transfer only occurs for mergers or secondaries that
     # don't evolve beyond the MS due to low masses)
-    RLO_1 = RLO_all.loc[RLO_all.ID.value_counts() == 1]
+    ind_RLO_1 = np.where(RLO_all.ID.value_counts() == 1, RLO_all.ID.value_counts().index, -1)
+    ind_RLO_1 = ind_RLO_1[ind_RLO_1 >= 0]
+    RLO_1 = RLO_all.loc[RLO_all.ID.isin(ind_RLO_1)]
+    
     CE1 = d.loc[(d.ID.isin(RLO_1.ID)) & (d.event == 511)].ID.unique()
     CE1_merge = d.loc[(d.ID.isin(CE1)) & (d.event == 52)].ID.unique()
     CE1_survive = np.setxor1d(CE1, CE1_merge)
@@ -177,7 +183,10 @@ def select_channels(d):
 
 
     # select the systems which go through SMT which evolves to CE based on Stellar evolution
-    RLO_3 = RLO_all.loc[RLO_all.ID.value_counts() == 3]
+    ind_RLO_3 = np.where(RLO_all.ID.value_counts() == 3, RLO_all.ID.value_counts().index, -1)
+    ind_RLO_3 = ind_RLO_3[ind_RLO_3 >= 0]
+    RLO_3 = RLO_all.loc[RLO_all.ID.isin(ind_RLO_3)]
+
     evCE1_SMT2 = RLO_3.loc[((RLO_3.groupby('ID', as_index=False).nth(0).event == 31) & 
                               (RLO_3.groupby('ID', as_index=False).nth(1).event.isin([511, 513, 53])) & 
                               (RLO_3.groupby('ID', as_index=False).nth(2).event == 32))].ID.unique()
@@ -207,8 +216,10 @@ def select_channels(d):
     RLO_3_other = RLO_3.loc[~RLO_3.ID.isin(bID3)].ID.unique()
 
     
-    
-    RLO_4_or_more_other = RLO_all.loc[RLO_all.ID.value_counts() > 3].ID.unique()
+    ind_RLO_4 = np.where(RLO_all.ID.value_counts() >= 4, RLO_all.ID.value_counts().index, -1)
+    ind_RLO_4 = ind_RLO_4[ind_RLO_4 >= 0]
+    RLO_4_or_more_other = RLO_all.loc[RLO_all.ID.isin(ind_RLO_4)]
+    #RLO_4_or_more_other = RLO_all.loc[RLO_all.ID.value_counts() > 3].ID.unique()
     # select systems which merge due to failed CE
     #failed_CE = d.loc[d.event == 52].ID.unique()
     
@@ -262,3 +273,9 @@ def select_channels(d):
     channels['CE1_CE2'] = CE1_CE2
     channels['No_RLO'] = No_RLO
     return channels
+
+
+
+
+
+
