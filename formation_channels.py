@@ -34,6 +34,44 @@ def select_evolutionary_states(d):
 
     return ZAMS, WDMS, DWD
 
+
+def first_interaction_channels(d):
+    '''Split out the different types of channels that could occur
+    in the first interaction
+
+    Parameters
+    ----------
+    d : `pandas.DataFrame`
+        contains T0 data for binaries as specified by BinCodex
+
+    Returns
+    -------
+    
+    '''
+
+    RLO_1 = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])].groupby('ID', as_index=False).first()
+
+    SMT_1 = RLO_1.loc[RLO_1.event == 31].ID
+    SMT_2 = RLO_1.loc[RLO_1.event == 32].ID
+    CE_1 = RLO_1.loc[RLO_1.event == 511].ID
+    CE_2 = RLO_1.loc[RLO_1.event == 512].ID
+    DCCE = RLO_1.loc[RLO_1.event == 513].ID
+    # need to check on whether systems go 511 --> 52. 
+    merger = RLO_1.loc[RLO_1.event.isin([52, 53])].ID
+
+    nonRLO = d.loc[~d.ID.isin(RLO_1.ID)].ID.unique()
+
+    first_RLO = {'SMT_1': SMT_1,
+                 'SMT_2': SMT_2,
+                 'CE_1': CE_1,
+                 'CE_2': CE_2,
+                 'DCCE': DCCE,
+                 'merger': merger,
+                 'nonRLO': nonRLO,}
+    return first_RLO
+
+    
+
 def select_final_state_ids(d):
     '''Sets the final state based on the evolution
 

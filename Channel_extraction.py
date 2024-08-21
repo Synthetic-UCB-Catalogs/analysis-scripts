@@ -21,26 +21,136 @@ from matplotlib import pyplot as plt
 from matplotlib.gridspec import SubplotSpec
 import h5py as h5
 import tarfile
+import cmasher as cmr
 
 import formation_channels as fc
 from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data, load_T0_data
 # -
 COSMIC = 'data/basic.h5'
-d, s_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+
+METISSE = 'data/basic_METISSE.h5'
+m, m_header = load_COSMIC_data(METISSE, metallicity=0.02)
+
+COMPAS = 'data/COMPAS_pilot.h5'
+co = load_COMPAS_data(COMPAS)
+
 
 # +
-#ComBinE = 'data/MC_sample_ecc_thermal_CommonOutputFormat.csv'
-#d, header = load_T0_data(filepath=ComBinE, code='ComBinE')
-
-# +
-#for ii in d.ID[::500000]:
-#    print(d.loc[d.ID == ii])
+#SEVN_mist = 'data/T0_format_pilot/MIST/setA/Z0.02/sevn_mist'
+#sm, sm_header = load_T0_data(SEVN_mist, code='SEVN', metallicity=0.02)
 # -
 
+def get_first_RLO_figure(d, q=0.49):
+    ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
+    #channels = fc.select_channels(d=d)
+
+    ZAMS['porb'] = ((ZAMS.semiMajor / 215.032)**3 / (ZAMS.mass1+ZAMS.mass2))**0.5 * 365.25
+    WDMS['porb'] = ((WDMS.semiMajor / 215.032)**3 / (WDMS.mass1+WDMS.mass2))**0.5 * 365.25
+    DWD['porb'] = ((DWD.semiMajor / 215.032)**3 / (DWD.mass1+DWD.mass2))**0.5 * 365.25
+    first_RLO = fc.first_interaction_channels(d=d)
+
+    init_q = ZAMS.loc[(np.round(ZAMS.mass2/ZAMS.mass1, 2) == q)]
+
+    #check that all IDs are accounted for:
+    all_IDs = d.ID.unique()
+    keys = ['SMT_1', 'SMT_2', 'CE_1', 'CE_2', 'DCCE', 'merger', 'nonRLO']
+    id_check = []
+    for k in keys:
+        id_check.extend(first_RLO[k])
+    if len(np.setxor1d(all_IDs, id_check)) > 0:
+        print("waning, you missed ids:", setxor1d(all_IDS, id_check))
+
+    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.4, 0.85), return_fmt='hex')
+    CE_colors = cmr.take_cmap_colors('cmr.sunburst', 3, cmap_range=(0.3, 0.9), return_fmt='hex')
+    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.35, 0.85), return_fmt='hex')
+
+    keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
+    colors_list = [SMT_colors, CE_colors, other_colors]
+    for colors, keys in zip(colors_list, keys_list):
+        for c, k, ii in zip(colors, keys, range(len(colors))):
+            ZAMS_select = init_q.loc[(init_q.ID.isin(first_RLO[k]))]
+            
+            if len(ZAMS_select) > 0:
+                #if k != 'failed_CE':
+                print(len(ZAMS_select), k)
+                plt.scatter(ZAMS_select.porb, ZAMS_select.mass1, c=c, s=5.8, label=k, zorder=200 - (1+ii)*5, marker='s')
+                
+                
+            else:
+                print(0, k)
+    print()
+    print()
+    plt.xscale('log')
+    plt.legend(loc=(0.0, 1.01), ncol=3, prop={'size':9})
+    plt.yscale('log')
+    plt.xlim(min(init_q.porb)-0.1, max(init_q.porb))
+    plt.ylim(min(init_q.mass1)-0.05, max(init_q.mass1)+0.5)
+    
+    plt.xlabel('orbital period [day]')
+    plt.ylabel('M$_1$ [Msun]')
+    plt.show()
+
+    return first_RLO
+
+first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49)
+
+first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88)
+
+first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49)
+
+first_RLO_co_09 = get_first_RLO_figure(d=co, q=0.88)
+
+first_RLO_m_05 = get_first_RLO_figure(d=m, q=0.49)
+
+first_RLO_m_09 = get_first_RLO_figure(d=m, q=0.88)
 
 
-ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
-channels = fc.select_channels(d=d)
+
+
+
+
+
+# +
+fig = plt.figure(figsize=(5.8,4), dpi=150)
+first_RLO_keys = first_RLO.keys()
+keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
+colors_list = [SMT_colors, CE_colors, other_colors]
+for colors, keys in zip(colors_list, keys_list):
+    for c, k, ii in zip(colors, keys, range(len(colors))):
+        ZAMS_select = init_05.loc[(init_05.ID.isin(first_RLO[k]))]
+        
+        if len(ZAMS_select) > 0:
+            #if k != 'failed_CE':
+            print(len(ZAMS_select), k)
+            plt.scatter(ZAMS_select.porb, ZAMS_select.mass1, c=c, s=5.8, label=k, zorder=200 - (1+ii)*5, marker='s')
+            
+            
+        else:
+            print(0, k)
+
+#DWD_select = DWD.loc[DWD.ID.isin(init_09.ID)]
+#DWD_ZAMS = init_09.loc[init_09.ID.isin(DWD.ID)]
+#print(DWD_select)
+#plt.scatter(DWD_ZAMS.porb, DWD_ZAMS.mass1, c='black', s=50, zorder=0)
+print()
+print()
+plt.xscale('log')
+plt.legend(loc=(0.0, 1.01), ncol=3, prop={'size':9})
+plt.yscale('log')
+plt.xlim(min(init_05.porb)-0.1, max(init_05.porb))
+plt.ylim(min(init_05.mass1)-0.05, max(init_05.mass1)+0.5)
+
+plt.xlabel('orbital period [day]')
+plt.ylabel('M$_1$ [Msun]')
+plt.show()
+#plt.savefig('cosmic_q_i_09.png', facecolor='white', dpi=150)
+# -
+
+for ID in sm.ID.unique()[::1000]:
+    print(sm.loc[sm.ID == ID][['time', 'event', 'semiMajor', 'type1', 'mass1', 'type2', 'mass2']])
+
+DWD
 
 ZAMS['porb'] = ((ZAMS.semiMajor / 215.032)**3 / (ZAMS.mass1+ZAMS.mass2))**0.5 * 365.25
 WDMS['porb'] = ((WDMS.semiMajor / 215.032)**3 / (WDMS.mass1+WDMS.mass2))**0.5 * 365.25
@@ -115,7 +225,7 @@ for colors, keys in zip(colors_list, keys_list):
         if len(ZAMS_select) > 0:
             #if k != 'failed_CE':
             print(len(ZAMS_select), k)
-            plt.scatter(ZAMS_select.porb, ZAMS_select.mass1, c=c, s=5.8, label=k, zorder=200 - (1+ii)*5, marker='s')
+            plt.scatter(ZAMS_select.semiMajor, ZAMS_select.mass1, c=c, s=5.8, label=k, zorder=200 - (1+ii)*5, marker='s')
             
             
         else:
@@ -130,10 +240,10 @@ print()
 plt.xscale('log')
 plt.legend(loc=(0.0, 1.01), ncol=3, prop={'size':9})
 plt.yscale('log')
-plt.xlim(min(init_05.porb)-0.1, max(init_05.porb)+1e3)
+plt.xlim(min(init_05.semiMajor)-0.1, max(init_05.semiMajor))
 plt.ylim(min(init_05.mass1)-0.05, max(init_05.mass1)+0.5)
 
-plt.xlabel('orbital period [days]')
+plt.xlabel('semimajor axis [Rsun]')
 plt.ylabel('M$_1$ [Msun]')
 plt.show()
 #plt.savefig('cosmic_q_i_09.png', facecolor='white', dpi=150)

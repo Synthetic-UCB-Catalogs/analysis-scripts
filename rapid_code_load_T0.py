@@ -312,7 +312,7 @@ def load_SeBa_data(filepath, metallicity):
     return dat, header
 
 
-def load_BSE_data(filepath, metallicity):
+def load_BSE_data(filepath, metallicity, saveT0=True):
     """Read in BSE data and select at DWD formation
     
     Parameters
