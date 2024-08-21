@@ -41,7 +41,7 @@ co = load_COMPAS_data(COMPAS)
 #sm, sm_header = load_T0_data(SEVN_mist, code='SEVN', metallicity=0.02)
 # -
 
-def get_first_RLO_figure(d, q=0.49):
+def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
     #channels = fc.select_channels(d=d)
 
@@ -67,6 +67,7 @@ def get_first_RLO_figure(d, q=0.49):
 
     keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
     colors_list = [SMT_colors, CE_colors, other_colors]
+    plt.figure(figsize=(6,4.8))
     for colors, keys in zip(colors_list, keys_list):
         for c, k, ii in zip(colors, keys, range(len(colors))):
             ZAMS_select = init_q.loc[(init_q.ID.isin(first_RLO[k]))]
@@ -89,15 +90,18 @@ def get_first_RLO_figure(d, q=0.49):
     
     plt.xlabel('orbital period [day]')
     plt.ylabel('M$_1$ [Msun]')
+    if savefig != None:
+        plt.tight_layout()
+        plt.savefig(savefig, dpi=100, facecolor='white')
     plt.show()
 
     return first_RLO
 
-first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49)
+first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49, savefig='first_RLO_COSMIC_pilot_qinit05.png')
 
-first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88)
+first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88, savefig='first_RLO_COSMIC_pilot_qinit09.png')
 
-first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49)
+first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit09.png')
 
 first_RLO_co_09 = get_first_RLO_figure(d=co, q=0.88)
 
