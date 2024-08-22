@@ -740,7 +740,26 @@ class COMPAS_UCB_Events(object):
             allmasks.append([ maskStartOfRlof1, maskStartOfRlof2 ][ii])
             allevents.append( 3*10 + whichStar )
     
-        # 2. End of RLOF
+        # 2. CEE events - Process each CEE donor separately, plus double CEE for both
+        maskAnyCEE = isCEE & ~isMerger
+        whichStar = 1
+        maskCEE1 = isRlof1 & ~isRlof2 & maskAnyCEE
+        allmasks.append(maskCEE1)
+        allevents.append(410 + whichStar)
+        whichStar = 2
+        maskCEE2 = isRlof2 & ~isRlof1 & maskAnyCEE
+        allmasks.append(maskCEE2)
+        allevents.append(410 + whichStar)
+        whichStar = 3
+        maskCEE3 = isRlof2 & isRlof1 & maskAnyCEE
+        allmasks.append(maskCEE3)
+        allevents.append(410 + whichStar)
+
+        # 3. Mergers
+        allmasks.append(isMerger)
+        allevents.append(42)
+        
+        # 4. End of RLOF
         maskFirstMtInParade1 = isRlof1 & ~wasRlof1
         maskFirstMtInParade2 = isRlof2 & ~wasRlof2
         for ii in range(2):
@@ -750,27 +769,8 @@ class COMPAS_UCB_Events(object):
             maskLastMtInParade = np.zeros_like(uid).astype(bool)
             maskLastMtInParade[idxLastMtInParade] = True
             allmasks.append(maskLastMtInParade & ~isCEE)
-            allevents.append(4*10 + whichStar)
+            allevents.append(5*10 + whichStar)
     
-        # 3. CEE events - Process each CEE donor separately, plus double CEE for both
-        maskAnyCEE = isCEE & ~isMerger
-        whichStar = 1
-        maskCEE1 = isRlof1 & ~isRlof2 & maskAnyCEE
-        allmasks.append(maskCEE1)
-        allevents.append(510 + whichStar)
-        whichStar = 2
-        maskCEE2 = isRlof2 & ~isRlof1 & maskAnyCEE
-        allmasks.append(maskCEE2)
-        allevents.append(510 + whichStar)
-        whichStar = 3
-        maskCEE3 = isRlof2 & isRlof1 & maskAnyCEE
-        allmasks.append(maskCEE3)
-        allevents.append(510 + whichStar)
-    
-        # 4. Mergers
-        allmasks.append(isMerger)
-        allevents.append(52)
-        
         # 5. Contact phase (do we do this?)
         # TBD
         
