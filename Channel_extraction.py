@@ -101,13 +101,13 @@ first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49, savefig='first_RLO_COSMIC_pil
 
 first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88, savefig='first_RLO_COSMIC_pilot_qinit09.png')
 
-first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit09.png')
+first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit05.png')
 
-first_RLO_co_09 = get_first_RLO_figure(d=co, q=0.88)
+first_RLO_co_09 = get_first_RLO_figure(d=co, q=0.88, savefig='first_RLO_COMPAS_pilot_qinit09.png')
 
-first_RLO_m_05 = get_first_RLO_figure(d=m, q=0.49)
+first_RLO_m_05 = get_first_RLO_figure(d=m, q=0.49, savefig='first_RLO_METISSE_pilot_qinit05.png')
 
-first_RLO_m_09 = get_first_RLO_figure(d=m, q=0.88)
+first_RLO_m_09 = get_first_RLO_figure(d=m, q=0.88, savefig='first_RLO_METISSE_pilot_qinit09.png')
 
 
 
