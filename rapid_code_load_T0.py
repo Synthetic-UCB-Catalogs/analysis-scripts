@@ -401,11 +401,13 @@ def load_BSE_data(filepath, metallicity):
 
 def load_T0_data(filepath, code, **kwargs):
     """Read in standardized output Common Core data and select at DWD formation
+
+    Note: all codes should save their T0 dataframes as hdf, for speed and storage
     
     Parameters
     ----------
     filepath : `str`
-        name of file including path
+        filepath to T0 datafile 
 
     code : `str`
         name of the code used to generate the data
@@ -470,6 +472,11 @@ def load_T0_data(filepath, code, **kwargs):
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
 
+    elif code == "COMPAS":
+        with pd.HDFStore(filepath) as hdf_store:
+            header_info = hdf_store.get_storer('data').attrs.metadata
+            dat = hdf_store.get('data')
+
     header = pd.DataFrame.from_dict([header_info])
         
     return dat, header
@@ -498,9 +505,14 @@ def load_IC(filepath):
 
 
 
-def load_COMPAS_data(filepath, testing=False):
+def convert_COMPAS_data_to_TO(filepath, hdf5_filename="COMPAS_T0.hdf5", testing=False):
     ucb_events_obj = COMPAS_UCB_Events(filepath, testing)
-    return ucb_events_obj.getEvents()
+    df = ucb_events_obj.getEvents()
+    df.to_hdf(hdf5_filename, key='data', mode='w')
+    with pd.HDFStore(hdf5_filename) as hdf_store:
+        hdf_store.put('data', df, format='table') 
+        hdf_store.get_storer('data').attrs.metadata = df.attrs
+    return df # typically not needed, but possibly good for testing
 
 class COMPAS_UCB_Events(object):
 
@@ -530,6 +542,7 @@ class COMPAS_UCB_Events(object):
         self.getUCBEventForSupernova()
         self.getUCBEventForMassTransfer()
         self.getUCBEventForStartAndEndConditions()
+
         
     def initialiaze_header(self):
         self.header = {
@@ -602,6 +615,8 @@ class COMPAS_UCB_Events(object):
         self.all_UCB_events = df                                        # Convert back from df
         self.update_header()                                            # Update the header with new information
         self.all_UCB_events = self.all_UCB_events.reset_index(drop=True)
+
+        self.all_UCB_events.attrs = self.header # Set header for the df
         return self.all_UCB_events
 
     def verifyAndConvertCompasDataToUcbUsingDict(self, compasData, conversionDict):
