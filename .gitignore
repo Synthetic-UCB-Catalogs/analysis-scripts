@@ -1,2 +1,4 @@
 big_data
 *.png
+.DS_Store
+data
