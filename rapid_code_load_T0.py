@@ -741,7 +741,7 @@ class COMPAS_UCB_Events(object):
             allevents.append( 3*10 + whichStar )
     
         # 2. CEE events - Process each CEE donor separately, plus double CEE for both
-        maskAnyCEE = isCEE & ~isMerger
+        maskAnyCEE = isCEE 
         whichStar = 1
         maskCEE1 = isRlof1 & ~isRlof2 & maskAnyCEE
         allmasks.append(maskCEE1)
