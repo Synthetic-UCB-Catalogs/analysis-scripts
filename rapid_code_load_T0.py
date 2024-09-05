@@ -184,7 +184,7 @@ def Eggleton_Roche_lobe(q, sep):
     return Roche_lobe
 
 
-def load_SeBa_data(filepath, metallicity):
+def load_SeBa_data(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5"):
     """Read in SeBa data and select at DWD formation
 
     Parameters
@@ -296,10 +296,16 @@ def load_SeBa_data(filepath, metallicity):
                    "Z": metallicity}
 
     header = pd.DataFrame.from_dict([header_info])
-    return dat, header
+
+    # Save in hdf5 format
+    dat.to_hdf(hdf5_filename, key='data', mode='w')
+    with pd.HDFStore(hdf5_filename) as hdf_store:
+        hdf_store.put('data', dat, format='table') 
+        hdf_store.get_storer('data').attrs.metadata = header
+    return dat # typically not needed, but possibly good for testing
 
 
-def load_BSE_data(filepath, metallicity):
+def load_BSE_data(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
     """Read in BSE data and select at DWD formation
     
     Parameters
@@ -403,7 +409,13 @@ def load_BSE_data(filepath, metallicity):
                    "Z": metallicity}
     
     header = pd.DataFrame.from_dict([header_info])
-    return dat, header
+
+    # Save in hdf5 format
+    dat.to_hdf(hdf5_filename, key='data', mode='w')
+    with pd.HDFStore(hdf5_filename) as hdf_store:
+        hdf_store.put('data', dat, format='table') 
+        hdf_store.get_storer('data').attrs.metadata = header
+    return dat # typically not needed, but possibly good for testing
 
 def load_T0_data(filepath, code, **kwargs):
     """Read in standardized output Common Core data and select at DWD formation
@@ -478,13 +490,12 @@ def load_T0_data(filepath, code, **kwargs):
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
 
-    elif (code == "COMPAS") or (code == "COSMIC"):
+    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]):
         with pd.HDFStore(filepath) as hdf_store:
             header_info = hdf_store.get_storer('data').attrs.metadata
             dat = hdf_store.get('data')
 
     header = pd.DataFrame.from_dict([header_info])
-        
     return dat, header
 
 def load_IC(filepath):
