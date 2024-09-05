@@ -478,7 +478,7 @@ def load_T0_data(filepath, code, **kwargs):
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
 
-    elif code == "COMPAS":
+    elif (code == "COMPAS") or (code == "COSMIC"):
         with pd.HDFStore(filepath) as hdf_store:
             header_info = hdf_store.get_storer('data').attrs.metadata
             dat = hdf_store.get('data')
