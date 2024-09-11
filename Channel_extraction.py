@@ -35,6 +35,9 @@ m, m_header = load_COSMIC_data(METISSE, metallicity=0.02)
 COMPAS = 'data/COMPAS_pilot.h5'
 co = load_COMPAS_data(COMPAS)
 
+COSMIC = 'data/basic.h5'
+c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+
 
 # +
 #SEVN_mist = 'data/T0_format_pilot/MIST/setA/Z0.02/sevn_mist'
