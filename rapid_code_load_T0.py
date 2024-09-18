@@ -490,7 +490,7 @@ def load_T0_data(filepath, code, **kwargs):
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
 
-    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]):
+    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
         with pd.HDFStore(filepath) as hdf_store:
             header_info = hdf_store.get_storer('data').attrs.metadata
             dat = hdf_store.get('data')
