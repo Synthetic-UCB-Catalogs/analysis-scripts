@@ -139,7 +139,7 @@ def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hd
                "mass1","radius1","Teff1","massHeCore1",
                "type2","mass2","radius2","Teff2","massHeCore2"]]
 
-    header_info = {"cofVer" : 1.0, 
+    header = {"cofVer" : 1.0, 
                    "cofLevel": "L0",
                    "cofExtension": "None", 
                    "bpsName": "COSMIC",
@@ -149,10 +149,6 @@ def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hd
                    "NLINES": len(dat),
                    "Z": metallicity}
                        
-                   
-
-    header = pd.DataFrame.from_dict([header_info])
-
     # Save in hdf5 format
     dat.to_hdf(hdf5_filename, key='data', mode='w')
     with pd.HDFStore(hdf5_filename) as hdf_store:
@@ -706,7 +702,7 @@ class COMPAS_UCB_Events(object):
         # Indirect output
         whichStar = SL['Star_Switching'][()]
         event = 10 + whichStar
-        scrapSeeds = np.zeros_like(uid).astype(bool) # TODO Scrap seeds if start of RLOF for both in the same timestep - is there any way to work with these??
+        scrapSeeds = np.zeros_like(uid).astype(bool) 
     
         self.addEvents(  uid=uid, time=time, event=event, semiMajor=semiMajorAxis, eccentricity=eccentricity, 
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
@@ -764,8 +760,8 @@ class COMPAS_UCB_Events(object):
         # So instead of doing a bunch of final MT timesteps and overwriting with any CEEs, I just include ~CEE in the condition.
         
         # 1. Start of RLOF.
-        maskStartOfRlof1 = isRlof1 & ~wasRlof1 & ~isCEE
-        maskStartOfRlof2 = isRlof2 & ~wasRlof2 & ~isCEE
+        maskStartOfRlof1 = isRlof1 & ~wasRlof1 
+        maskStartOfRlof2 = isRlof2 & ~wasRlof2 
     
         for ii in range(2):
             whichStar = ii+1 # either star 1 or 2
@@ -860,6 +856,11 @@ class COMPAS_UCB_Events(object):
         whichStar = SN["Supernova_State"][()] 
         assert np.all(np.in1d(whichStar, np.array([1, 2, 3]))) # TODO: need to address State 3 systems somehow.
         scrapSeeds = whichStar == 3 # need to remove these seeds at the end
+        if self.testing:
+            if np.any(scrapSeeds):
+                print("There were {} simultaneous SNe".format(np.sum(scrapSeeds)))
+                print("Their seeds were:")
+                print("[" + ", ".join(uid[scrapSeeds].astype(str)) + "]")
     
         snType = self.verifyAndConvertCompasDataToUcbUsingDict(SN["SN_Type(SN)"][()], self.compasSupernovaToUCBdict)
         fb = SN['Fallback_Fraction(SN)'][()]
