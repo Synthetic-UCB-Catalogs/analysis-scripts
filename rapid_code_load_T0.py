@@ -137,9 +137,9 @@ def load_COSMIC_data(filepath, metallicity, hdf5_filename="COSMIC_T0.hdf5"):
 
     # drop the 3's for common envelopes
     CE1_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1)].ID
-    t_RL1 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE1_IDs))].time.values
-    t_CE1 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE1_IDs))].time.values
-    t_common1 = np.intersect1d(t_RL1, t_CE1)
+    #t_RL1 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE1_IDs))].time.values
+    #t_CE1 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE1_IDs))].time.values
+    #t_common1 = np.intersect1d(t_RL1, t_CE1)
 
     dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)) & (dat.ID.isin(CE1_IDs)))]
 
@@ -509,7 +509,7 @@ def load_T0_data(filepath, code, **kwargs):
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
 
-    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]):
+    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
         with pd.HDFStore(filepath) as hdf_store:
             header_info = hdf_store.get_storer('data').attrs.metadata
             dat = hdf_store.get('data')

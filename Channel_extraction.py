@@ -24,7 +24,7 @@ import tarfile
 import cmasher as cmr
 
 import formation_channels as fc
-from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data, load_T0_data
+from rapid_code_load_T0 import load_BSE_data, convert_COMPAS_data_to_TO, load_COSMIC_data, load_SeBa_data, load_T0_data
 # -
 COSMIC = 'data/basic.h5'
 c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
@@ -32,8 +32,8 @@ c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
 METISSE = 'data/basic_METISSE.h5'
 m, m_header = load_COSMIC_data(METISSE, metallicity=0.02)
 
-COMPAS = 'data/COMPAS_pilot.h5'
-co = load_COMPAS_data(COMPAS)
+COMPAS = '/Users/kbreivik/Downloads/COMPAS_pilot.h5'
+co = convert_COMPAS_data_to_TO(COMPAS)
 
 COSMIC = 'data/basic.h5'
 c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
@@ -104,7 +104,17 @@ first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49, savefig='first_RLO_COSMIC_pil
 
 first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88, savefig='first_RLO_COSMIC_pilot_qinit09.png')
 
+first_RLO_co_05.keys()
+
+first_RLO_co_05['SMT_1']
+
+co.columns
+
 first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit05.png')
+
+co.loc[(co.ID.isin(first_RLO_co_05['nonRLO']))& (co.type1.isin([21.0, 22.0, 23.0])) & (co.semiMajor < 100)][['mass1', 'mass2', 'ID']]
+
+co.loc[co.ID == 366369]
 
 first_RLO_co_09 = get_first_RLO_figure(d=co, q=0.88, savefig='first_RLO_COMPAS_pilot_qinit09.png')
 
