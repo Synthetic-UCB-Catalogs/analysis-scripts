@@ -24,15 +24,36 @@ import tarfile
 
 
 # + colab={"base_uri": "https://localhost:8080/"} id="q1cShMsXHZ9n" executionInfo={"status": "ok", "timestamp": 1716398731600, "user_tz": 240, "elapsed": 19009, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}} outputId="9735f1f2-99ee-4bb2-b38b-a4341eb77bfc"
-from rapid_code_load_T0 import load_BSE_data, load_COMPAS_data, load_COSMIC_data, load_SeBa_data
+from rapid_code_load_T0 import load_T0_data, convert_COSMIC_data_to_T0, convert_COMPAS_data_to_T0, convert_SeBa_data_to_T0, convert_BSE_data_to_T0
 
 # + id="gCM5jUEPHdMc" executionInfo={"status": "ok", "timestamp": 1716398764160, "user_tz": 240, "elapsed": 198, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-#COSMIC = "/content/drive/MyDrive/Synthetic UCB Catalog Project/code comparison/Code Comparison Steps/Binary Comparison/Pilot runs/COSMIC/basic.h5"
-COSMIC = 'data/basic.h5'
+# Convert the data to T0 format - should only have to do this once, then comment out these lines
+#COSMIC_OG = 'data/large_OG_datafiles/pilot_runs/cosmic_pilot.h5'
+#convert_COSMIC_data_to_T0(COSMIC_OG, metallicity=0.02)
+
+
+# + id="gCM5jUEPHdMc" executionInfo={"status": "ok", "timestamp": 1716398764160, "user_tz": 240, "elapsed": 198, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
+#COMPAS_OG  = 'data/large_OG_datafiles/pilot_runs/COMPAS_pilot.h5'
+#convert_COMPAS_data_to_T0(COMPAS_OG)
+
+
+# + id="gCM5jUEPHdMc" executionInfo={"status": "ok", "timestamp": 1716398764160, "user_tz": 240, "elapsed": 198, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
+#SeBa_OG = 'data/large_OG_datafiles/pilot_runs/Seba_BinCodex.h5'
+#convert_SeBa_data_to_T0(SeBa_OG, metallicity=0.02)
+
+
+# + id="gCM5jUEPHdMc" executionInfo={"status": "ok", "timestamp": 1716398764160, "user_tz": 240, "elapsed": 198, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
+#BSE_OG = 'data/large_OG_datafiles/pilot_runs/bse_pilot.dat'
+#convert_BSE_data_to_T0(BSE_OG, metallicity=0.02)
+# -
+
+
 
 
 # + id="x8tGcq__Hurt" executionInfo={"status": "ok", "timestamp": 1716398821262, "user_tz": 240, "elapsed": 53936, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
-COSMIC_full, s_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+# Use the loader to load the data files
+d_cosmic = load_T0_data('COSMIC_T0.hdf5')
+d_compas = load_T0_data('COMPAS_T0.hdf5')
 
 # + id="WPauZbOHQQAH" executionInfo={"status": "ok", "timestamp": 1716398821262, "user_tz": 240, "elapsed": 13, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
 d = COSMIC_full
@@ -132,6 +153,7 @@ plt.scatter(d.loc[(d.ID.isin(nonint)) & (d.ID.isin(DWD.ID.unique()))].groupby('I
 plt.colorbar()
 plt.xscale('log')
 plt.yscale('log')
+plt.show()
 
 # + id="Up4k_ExCzZoA"
 d = d.loc[~((d.event.shift() == 41) & (d.event == 31) & (d.time - d.time.shift() < 0.2))]
@@ -215,4 +237,7 @@ ax1.set_xlabel('log(a/Rsun)')
 ax2.set_xlabel('log(a/Rsun)')
 
 # + id="jfMEaRnFPM37"
+
+# -
+
 

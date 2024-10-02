@@ -1,14 +1,125 @@
+import os
 import pandas as pd
 import numpy as np
 import h5py as h5
 
+#######################################################################
+### Functions to load T0.hdf5 data
+#######################################################################
 
-def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hdf5"):
+def load_T0_data(ifilepath, code=None, **kwargs):
+    """Read in standardized output Common Core data and select at DWD formation
+
+    Note: all codes should save their T0 dataframes as hdf, for speed and storage
+    
+    Parameters
+    ----------
+    ifilepath : `str`
+        ifilepath to T0 datafile 
+
+    code : 
+        name of code (only required for non-standard codes, ComBinE and SEVN)
+
+    **kwargs
+        metallicty : `float`
+            metallicity of the data if code=='SEVN'; this is usually encoded in the path
+
+    Returns
+    -------
+    dat : `pandas.DataFrame`
+        all data in T0 format
+        
+    header : `pandas.DataFrame`
+        header for dat
+    """
+    if code == "ComBinE":
+        col_standard = ["ID","UID","SID","time","event",
+                        "semiMajor","eccentricity","type1",
+                        "mass1","radius1","Teff1","massHeCore1",
+                        "type2","mass2","radius2","Teff2","massHeCore2",
+                        "envBindEn","massCOCore1","massCOCore2",
+                        "radiusRL1","radiusRL2","period",
+                        "luminosity1","luminosity2"]
+
+        # load the data
+        dat = pd.read_csv(ifilepath, skiprows=6, names=col_standard)
+        lines_number = 6
+        with open(ifilepath) as input_file:
+            head = [next(input_file) for _ in range(lines_number)]
+            T0_info = head[4].replace(" ", "").split(",")
+        
+            header_info = {"cofVer" : float(T0_info[0]), 
+                           "cofLevel": T0_info[1],
+                           "cofExtension": "None", 
+                           "bpsName": T0_info[3],
+                           "bpsVer": T0_info[4], 
+                           "contact": T0_info[5], 
+                           "NSYS": int(T0_info[6]), 
+                           "NLINES": int(T0_info[7]),
+                           "Z": float(T0_info[8].replace("\n",""))}
+    elif code == "SEVN":
+        metallicity = kwargs.pop('metallicity')
+        col_standard = ["ID","UID","time","event","semiMajor","eccentricity",
+                        "type1","mass1","radius1","Teff1","massHecore1",
+                        "type2","mass2","radius2","Teff2","massHecore2"]
+        #read in the data with the columns
+        dat = pd.read_csv(ifilepath, skiprows=3, names=col_standard)
+
+        #read in the T0 info in the header
+        lines_number = 3
+        with open(ifilepath) as input_file:
+            head = [next(input_file) for _ in range(lines_number)]
+            T0_info = head[1].replace(" ", "").split(",")
+            header_info = {"cofVer" : float(T0_info[0]), 
+                           "cofLevel": T0_info[1],
+                           "cofExtension": "None", 
+                           "bpsName": T0_info[3],
+                           "bpsVer": T0_info[4], 
+                           "contact": T0_info[5], 
+                           "NSYS": int(T0_info[6]), 
+                           "NLINES": int(T0_info[7]),
+                           "Z": metallicity}
+
+    #elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
+    else:
+        with pd.HDFStore(ifilepath) as hdf_store:
+            header_info = hdf_store.get_storer('data').attrs.metadata
+            dat = hdf_store.get('data')
+
+    header = pd.DataFrame.from_dict([header_info])
+    return dat, header
+
+def load_IC(ifilepath):
+    """Read in initial data
+    
+    Parameters
+    ----------
+    ifilepath : `str`
+        name of file including path
+
+    Returns
+    -------
+    ICs : `pandas.DataFrame`
+        all ICs at Zero Age Main Sequence
+    """
+    try:
+        ICs = pd.read_csv(filename, skiprows=1, names=["mass1", "mass2", "period"])
+    except:
+        ICs = pd.read_csv(filename, skiprows=1, names=["mass1", "mass2", "eccentricity"])
+
+    return ICs
+
+
+#######################################################################
+### Functions to convert from original code outputs into T0.hdf5 format
+#######################################################################
+
+def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filename="COSMIC_T0.hdf5"):
     """Read in COSMIC data and convert to L0
     
     Parameters
     ----------
-    filepath : `str`
+    ifilepath : `str`
         name of file including path
         
     metallicity : `float`
@@ -24,8 +135,8 @@ def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hd
     """
 
     # load the data
-    dat = pd.read_hdf(filepath, key="bpp")
-    bcm = pd.read_hdf(filepath, key="bcm")
+    dat = pd.read_hdf(ifilepath, key="bpp")
+    bcm = pd.read_hdf(ifilepath, key="bcm")
     
     # grab bin_nums for SNe types from bcm
     bn_1_cc = bcm.loc[bcm.SN_1 == 1].bin_num.unique()
@@ -139,7 +250,7 @@ def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hd
                "mass1","radius1","Teff1","massHeCore1",
                "type2","mass2","radius2","Teff2","massHeCore2"]]
 
-    header_info = {"cofVer" : 1.0, 
+    header = {"cofVer" : 1.0, 
                    "cofLevel": "L0",
                    "cofExtension": "None", 
                    "bpsName": "COSMIC",
@@ -149,13 +260,12 @@ def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hd
                    "NLINES": len(dat),
                    "Z": metallicity}
                        
-                   
-
-    header = pd.DataFrame.from_dict([header_info])
-
     # Save in hdf5 format
-    dat.to_hdf(hdf5_filename, key='data', mode='w')
-    with pd.HDFStore(hdf5_filename) as hdf_store:
+    if outputpath is None:
+        outputpath = os.path.split(ifilepath)[0]
+    ofilepath = os.path.join(outputpath, hdf5_filename)
+    dat.to_hdf(ofilepath, key='data', mode='w')
+    with pd.HDFStore(ofilepath) as hdf_store:
         hdf_store.put('data', dat, format='table') 
         hdf_store.get_storer('data').attrs.metadata = header
     return dat # typically not needed, but possibly good for testing
@@ -184,12 +294,12 @@ def Eggleton_Roche_lobe(q, sep):
     return Roche_lobe
 
 
-def convert_SeBa_data_to_T0(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5"):
+def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filename="SeBa_T0.hdf5"):
     """Read in SeBa data and select at DWD formation
 
     Parameters
     ----------
-    filepath : `str`
+    ifilepath : `str`
         name of file including path
 
     Returns
@@ -201,7 +311,7 @@ def convert_SeBa_data_to_T0(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5")
         header for dat
     """
     # load data
-    dat = pd.read_csv(filepath, sep="\s+",
+    dat = pd.read_csv(ifilepath, sep="\s+",
         names=["UID", "SID", "mass_transfer_type", "time", "semiMajor", "eccentricity",
                "stellar_indentity1", "star_type1", "mass1", "radius1", "Teff1", "massHeCore1",
                "stellar_indentity2", "star_type2", "mass2", "radius2", "Teff2", "massHeCore2"])
@@ -298,19 +408,22 @@ def convert_SeBa_data_to_T0(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5")
     header = pd.DataFrame.from_dict([header_info])
 
     # Save in hdf5 format
-    dat.to_hdf(hdf5_filename, key='data', mode='w')
-    with pd.HDFStore(hdf5_filename) as hdf_store:
+    if outputpath is None:
+        outputpath = os.path.split(ifilepath)[0]
+    ofilepath = os.path.join(outputpath, hdf5_filename)
+    dat.to_hdf(ofilepath, key='data', mode='w')
+    with pd.HDFStore(ofilepath) as hdf_store:
         hdf_store.put('data', dat, format='table') 
         hdf_store.get_storer('data').attrs.metadata = header
     return dat # typically not needed, but possibly good for testing
 
 
-def convert_BSE_data_to_T0(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
+def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filename="BSE_T0.hdf5"):
     """Read in BSE data and select at DWD formation
     
     Parameters
     ----------
-    filepath : `str`
+    ifilepath : `str`
         name of file including path
 
     Returns
@@ -324,17 +437,17 @@ def convert_BSE_data_to_T0(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
     # load data
     try:
         cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period"]
-        dat = pd.read_csv(filepath, delim_whitespace=True,
+        dat = pd.read_csv(ifilepath, sep='\s+',
             names=cols
         )
     except Error: 
         cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "eccentricity"]
-        dat = pd.read_csv(filepath, delim_whitespace=True,
+        dat = pd.read_csv(ifilepath, sep='\s+',
             names=cols
         )
 
     if type(dat.iloc[0].UID) == str:
-        dat = pd.read_csv(filepath, delim_whitespace=True,
+        dat = pd.read_csv(ifilepath, sep='\s+',
         names=cols, header=1
         )
         
@@ -411,122 +524,26 @@ def convert_BSE_data_to_T0(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
     header = pd.DataFrame.from_dict([header_info])
 
     # Save in hdf5 format
-    dat.to_hdf(hdf5_filename, key='data', mode='w')
-    with pd.HDFStore(hdf5_filename) as hdf_store:
+    if outputpath is None:
+        outputpath = os.path.split(ifilepath)[0]
+    ofilepath = os.path.join(outputpath, hdf5_filename)
+    dat.to_hdf(ofilepath, key='data', mode='w')
+    with pd.HDFStore(ofilepath) as hdf_store:
         hdf_store.put('data', dat, format='table') 
         hdf_store.get_storer('data').attrs.metadata = header
     return dat # typically not needed, but possibly good for testing
 
-def load_T0_data(filepath, code, **kwargs):
-    """Read in standardized output Common Core data and select at DWD formation
-
-    Note: all codes should save their T0 dataframes as hdf, for speed and storage
-    
-    Parameters
-    ----------
-    filepath : `str`
-        filepath to T0 datafile 
-
-    code : `str`
-        name of the code used to generate the data
-
-    **kwargs
-        metallicty : `float`
-            metallicity of the data if code=='SEVN'; this is usually encoded in the path
-
-    Returns
-    -------
-    dat : `pandas.DataFrame`
-        all data in T0 format
-        
-    header : `pandas.DataFrame`
-        header for dat
-    """
-    if code == "ComBinE":
-        col_standard = ["ID","UID","SID","time","event",
-                        "semiMajor","eccentricity","type1",
-                        "mass1","radius1","Teff1","massHeCore1",
-                        "type2","mass2","radius2","Teff2","massHeCore2",
-                        "envBindEn","massCOCore1","massCOCore2",
-                        "radiusRL1","radiusRL2","period",
-                        "luminosity1","luminosity2"]
-
-        # load the data
-        dat = pd.read_csv(filepath, skiprows=6, names=col_standard)
-        lines_number = 6
-        with open(filepath) as input_file:
-            head = [next(input_file) for _ in range(lines_number)]
-            T0_info = head[4].replace(" ", "").split(",")
-        
-            header_info = {"cofVer" : float(T0_info[0]), 
-                           "cofLevel": T0_info[1],
-                           "cofExtension": "None", 
-                           "bpsName": T0_info[3],
-                           "bpsVer": T0_info[4], 
-                           "contact": T0_info[5], 
-                           "NSYS": int(T0_info[6]), 
-                           "NLINES": int(T0_info[7]),
-                           "Z": float(T0_info[8].replace("\n",""))}
-    elif code == "SEVN":
-        metallicity = kwargs.pop('metallicity')
-        col_standard = ["ID","UID","time","event","semiMajor","eccentricity",
-                        "type1","mass1","radius1","Teff1","massHecore1",
-                        "type2","mass2","radius2","Teff2","massHecore2"]
-        #read in the data with the columns
-        dat = pd.read_csv(filepath, skiprows=3, names=col_standard)
-
-        #read in the T0 info in the header
-        lines_number = 3
-        with open(filepath) as input_file:
-            head = [next(input_file) for _ in range(lines_number)]
-            T0_info = head[1].replace(" ", "").split(",")
-            header_info = {"cofVer" : float(T0_info[0]), 
-                           "cofLevel": T0_info[1],
-                           "cofExtension": "None", 
-                           "bpsName": T0_info[3],
-                           "bpsVer": T0_info[4], 
-                           "contact": T0_info[5], 
-                           "NSYS": int(T0_info[6]), 
-                           "NLINES": int(T0_info[7]),
-                           "Z": metallicity}
-
-    elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
-        with pd.HDFStore(filepath) as hdf_store:
-            header_info = hdf_store.get_storer('data').attrs.metadata
-            dat = hdf_store.get('data')
-
-    header = pd.DataFrame.from_dict([header_info])
-    return dat, header
-
-def load_IC(filepath):
-    """Read in initial data
-    
-    Parameters
-    ----------
-    filepath : `str`
-        name of file including path
-
-    Returns
-    -------
-    ICs : `pandas.DataFrame`
-        all ICs at Zero Age Main Sequence
-    """
-    try:
-        ICs = pd.read_csv(filename, skiprows=1, names=["mass1", "mass2", "period"])
-    except:
-        ICs = pd.read_csv(filename, skiprows=1, names=["mass1", "mass2", "eccentricity"])
-
-    return ICs
 
 
 
-
-
-def convert_COMPAS_data_to_T0(filepath, hdf5_filename="COMPAS_T0.hdf5", testing=False):
-    ucb_events_obj = COMPAS_UCB_Events(filepath, testing)
+def convert_COMPAS_data_to_T0(ifilepath, outputpath=None, hdf5_filename="COMPAS_T0.hdf5", testing=False):
+    ucb_events_obj = COMPAS_UCB_Events(ifilepath, testing)
     df = ucb_events_obj.getEvents()
-    df.to_hdf(hdf5_filename, key='data', mode='w')
-    with pd.HDFStore(hdf5_filename) as hdf_store:
+    if outputpath is None:
+        outputpath = os.path.split(ifilepath)[0]
+    ofilepath = os.path.join(outputpath, hdf5_filename)
+    df.to_hdf(ofilepath, key='data', mode='w')
+    with pd.HDFStore(ofilepath) as hdf_store:
         hdf_store.put('data', df, format='table') 
         hdf_store.get_storer('data').attrs.metadata = df.attrs
     return df # typically not needed, but possibly good for testing
@@ -548,10 +565,10 @@ class COMPAS_UCB_Events(object):
     ID UID time event semiMajor eccentricity type1 mass1 radius1 Teff1 massHecore1 type2 mass2 radius2 Teff2 massHeCore2
     """
 
-    def __init__(self, filepath, testing=False):
-        self.filepath = filepath
+    def __init__(self, ifilepath, testing=False):
+        self.ifilepath = ifilepath
         self.testing = testing
-        self.Data = h5.File(filepath, 'r')
+        self.Data = h5.File(ifilepath, 'r')
         self.all_UCB_events = None
         self.initialiaze_header()
         # Calculate the events as prescribed for the UCBs
@@ -706,7 +723,7 @@ class COMPAS_UCB_Events(object):
         # Indirect output
         whichStar = SL['Star_Switching'][()]
         event = 10 + whichStar
-        scrapSeeds = np.zeros_like(uid).astype(bool) # TODO Scrap seeds if start of RLOF for both in the same timestep - is there any way to work with these??
+        scrapSeeds = np.zeros_like(uid).astype(bool) 
     
         self.addEvents(  uid=uid, time=time, event=event, semiMajor=semiMajorAxis, eccentricity=eccentricity, 
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
@@ -764,8 +781,8 @@ class COMPAS_UCB_Events(object):
         # So instead of doing a bunch of final MT timesteps and overwriting with any CEEs, I just include ~CEE in the condition.
         
         # 1. Start of RLOF.
-        maskStartOfRlof1 = isRlof1 & ~wasRlof1 & ~isCEE
-        maskStartOfRlof2 = isRlof2 & ~wasRlof2 & ~isCEE
+        maskStartOfRlof1 = isRlof1 & ~wasRlof1 
+        maskStartOfRlof2 = isRlof2 & ~wasRlof2 
     
         for ii in range(2):
             whichStar = ii+1 # either star 1 or 2
@@ -860,6 +877,11 @@ class COMPAS_UCB_Events(object):
         whichStar = SN["Supernova_State"][()] 
         assert np.all(np.in1d(whichStar, np.array([1, 2, 3]))) # TODO: need to address State 3 systems somehow.
         scrapSeeds = whichStar == 3 # need to remove these seeds at the end
+        if self.testing:
+            if np.any(scrapSeeds):
+                print("There were {} simultaneous SNe".format(np.sum(scrapSeeds)))
+                print("Their seeds were:")
+                print("[" + ", ".join(uid[scrapSeeds].astype(str)) + "]")
     
         snType = self.verifyAndConvertCompasDataToUcbUsingDict(SN["SN_Type(SN)"][()], self.compasSupernovaToUCBdict)
         fb = SN['Fallback_Fraction(SN)'][()]
@@ -998,8 +1020,5 @@ class COMPAS_UCB_Events(object):
                          stellarType1=stellarType1, mass1=mass1, radius1=radius1, teff1=teff1, massHeCore1=massHeCore1, 
                          stellarType2=stellarType2, mass2=mass2, radius2=radius2, teff2=teff2, massHeCore2=massHeCore2,
                          scrapSeeds=scrapSeeds)
-
-
-
 
 
