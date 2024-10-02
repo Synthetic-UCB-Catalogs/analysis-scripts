@@ -3,7 +3,7 @@ import numpy as np
 import h5py as h5
 
 
-def load_COSMIC_data(filepath, metallicity, hdf5_filename="COSMIC_T0.hdf5"):
+def convert_COSMIC_data_to_T0(filepath, metallicity, hdf5_filename="COSMIC_T0.hdf5"):
     """Read in COSMIC data and convert to L0
     
     Parameters
@@ -184,7 +184,7 @@ def Eggleton_Roche_lobe(q, sep):
     return Roche_lobe
 
 
-def load_SeBa_data(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5"):
+def convert_SeBa_data_to_T0(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5"):
     """Read in SeBa data and select at DWD formation
 
     Parameters
@@ -305,7 +305,7 @@ def load_SeBa_data(filepath, metallicity, hdf5_filename="SeBa_T0.hdf5"):
     return dat # typically not needed, but possibly good for testing
 
 
-def load_BSE_data(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
+def convert_BSE_data_to_T0(filepath, metallicity, hdf5_filename="BSE_T0.hdf5"):
     """Read in BSE data and select at DWD formation
     
     Parameters
@@ -522,7 +522,7 @@ def load_IC(filepath):
 
 
 
-def convert_COMPAS_data_to_TO(filepath, hdf5_filename="COMPAS_T0.hdf5", testing=False):
+def convert_COMPAS_data_to_T0(filepath, hdf5_filename="COMPAS_T0.hdf5", testing=False):
     ucb_events_obj = COMPAS_UCB_Events(filepath, testing)
     df = ucb_events_obj.getEvents()
     df.to_hdf(hdf5_filename, key='data', mode='w')
