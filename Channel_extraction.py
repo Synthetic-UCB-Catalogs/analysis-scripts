@@ -24,20 +24,21 @@ import tarfile
 import cmasher as cmr
 
 import formation_channels as fc
-from rapid_code_load_T0 import load_BSE_data, convert_COMPAS_data_to_TO, load_COSMIC_data, load_SeBa_data, load_T0_data
+from rapid_code_load_T0 import convert_BSE_data_to_T0, convert_COMPAS_data_to_T0, convert_COSMIC_data_to_T0, convert_SeBa_data_to_T0, load_T0_data
 # -
 COSMIC = 'data/basic.h5'
-c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
+c = convert_COSMIC_data_to_T0(COSMIC, metallicity=0.02)
 
-METISSE = 'data/basic_METISSE.h5'
-m, m_header = load_COSMIC_data(METISSE, metallicity=0.02)
+# +
+#METISSE = 'data/basic_METISSE.h5'
+#m = convert_COSMIC_data_to_T0(METISSE, metallicity=0.02)
+# -
 
-COMPAS = '/Users/kbreivik/Downloads/COMPAS_pilot.h5'
-co = convert_COMPAS_data_to_TO(COMPAS)
+COMPAS = 'data/COMPAS_pilot.h5'
+co = convert_COMPAS_data_to_T0(COMPAS)
 
-COSMIC = 'data/basic.h5'
-c, c_header = load_COSMIC_data(COSMIC, metallicity=0.02)
-
+co['porb'] = ((co.semiMajor / 215.032)**3 / (co.mass1+co.mass2))**0.5 * 365.25
+    
 
 # +
 #SEVN_mist = 'data/T0_format_pilot/MIST/setA/Z0.02/sevn_mist'
@@ -51,9 +52,11 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS['porb'] = ((ZAMS.semiMajor / 215.032)**3 / (ZAMS.mass1+ZAMS.mass2))**0.5 * 365.25
     WDMS['porb'] = ((WDMS.semiMajor / 215.032)**3 / (WDMS.mass1+WDMS.mass2))**0.5 * 365.25
     DWD['porb'] = ((DWD.semiMajor / 215.032)**3 / (DWD.mass1+DWD.mass2))**0.5 * 365.25
-    first_RLO = fc.first_interaction_channels(d=d)
 
     init_q = ZAMS.loc[(np.round(ZAMS.mass2/ZAMS.mass1, 2) == q)]
+
+    d = d.loc[d.ID.isin(init_q.ID)]
+    first_RLO = fc.first_interaction_channels(d=d)
 
     #check that all IDs are accounted for:
     all_IDs = d.ID.unique()
@@ -100,9 +103,25 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
 
     return first_RLO
 
-first_RLO_c_05 = get_first_RLO_figure(d=c, q=0.49, savefig='first_RLO_COSMIC_pilot_qinit05.png')
+first_RLO_c_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit05.png')
 
-first_RLO_c09 = get_first_RLO_figure(d=c, q=0.88, savefig='first_RLO_COSMIC_pilot_qinit09.png')
+CE1_ID = first_RLO_c_05['CE_1'].values
+
+len(CE1_ID)
+
+plt.hist(co.loc[co.ID.isin(CE1_ID)].groupby('ID', as_index=False).first().mass2 / co.loc[co.ID.isin(CE1_ID)].groupby('ID', as_index=False).first().mass1)
+
+CE1_weird = co.loc[(co.mass1 > 2.5) & (co.porb < 4) & (co.ID.isin(CE1_ID))]
+
+# +
+
+for id in CE1_weird.ID.unique()[:50]:
+    print(CE1_weird.loc[CE1_weird.ID == id][['time', 'ID', 'event', 'mass1', 'mass2', 'porb', 'type1', 'type2']])
+# -
+
+co.loc[co.groupby('ID', as_index=False).first().time > 0]
+
+first_RLO_c09 = get_first_RLO_figure(d=co, q=0.88, savefig='first_RLO_COMPAS_pilot_qinit09.png')
 
 first_RLO_co_05.keys()
 
@@ -110,7 +129,7 @@ first_RLO_co_05['SMT_1']
 
 co.columns
 
-first_RLO_co_05 = get_first_RLO_figure(d=co, q=0.49, savefig='first_RLO_COMPAS_pilot_qinit05.png')
+first_RLO_co_05 = get_first_RLO_figure(d=c, q=0.49, savefig='first_RLO_COSMIC_pilot_qinit05.png')
 
 co.loc[(co.ID.isin(first_RLO_co_05['nonRLO']))& (co.type1.isin([21.0, 22.0, 23.0])) & (co.semiMajor < 100)][['mass1', 'mass2', 'ID']]
 
