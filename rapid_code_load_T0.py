@@ -172,23 +172,25 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
 
     # convert evol_type to event
     dat["event"] = np.zeros(len(dat))
-    dat.loc[dat.evol_type == 1, "event"] = -1
+    dat.loc[dat.evol_type == 1, "event"] = 13
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() < dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 32
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 33
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_2.isin([7,9])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2.isin([7,9])), "event"] = 43
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 41
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 42
+    dat.loc[(dat.evol_type == 4) & (dat.kstar_1 > 7) & (dat.kstar_2 > 7) & (dat.RRLO_1 == 0.99) & (dat.RRLO_2 == 0.99), "event"] = 43
+    dat.loc[(dat.evol_type == 4) & (dat.period == 0), "event"] = 52
     dat.loc[(dat.evol_type == 5), "event"] == 52
-    dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] == 52
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] == 511
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] == 512
-    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] == 513
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2 != 7) & (dat.kstar_2 != 9), "event"] = 41
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_2.isin([7,9])) & (dat.kstar_1 != 7) & (dat.kstar_1 != 9), "event"] = 42
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1.isin([7,9])) & (dat.kstar_2.isin([7,9])), "event"] = 43
+    dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] = 52
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 511
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 512
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 513
+    dat.loc[(dat.evol_type == 8) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 41
+    dat.loc[(dat.evol_type == 8) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 42
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1 > 7) & (dat.kstar_2 > 7) & (dat.RRLO_1 == 0.99) & (dat.RRLO_2 == 0.99), "event"] = 43
+    dat.loc[(dat.evol_type == 8) & (dat.period == 0), "event"] = 52
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_cc)), "event"] = 212
     dat.loc[(dat.evol_type == 16) & (dat.UID.isin(bn_2_cc)), "event"] = 222
     dat.loc[(dat.evol_type == 15) & (dat.UID.isin(bn_1_ecsn)), "event"] = 213
