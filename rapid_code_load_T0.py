@@ -1,4 +1,4 @@
-import os
+import os, sys
 import pandas as pd
 import numpy as np
 import h5py as h5
@@ -1022,3 +1022,34 @@ class COMPAS_UCB_Events(object):
                          scrapSeeds=scrapSeeds)
 
 
+if __name__ == "__main__":
+
+    # First argument is an integer, specifying which code base # this should be cleaned up later
+    # Second argument is the filepath to the dataoutput that needs to be converted
+    # Third (optional) argument is the filepath to the new T0-formatted data file
+    which = int(sys.argv[1])
+    ifilepath = sys.argv[2]
+    try:
+        ofilepath = sys.argv[3]
+    except:
+        ofilepath = None
+
+    print(ifilepath)
+    if not os.path.isfile(ifilepath):
+        raise Exception("Not a valid input file path")
+        
+    metallicity = 0.02
+    if which == 0:
+        print("trying cosmic")
+        convert_COSMIC_data_to_T0(ifilepath, metallicity, ofilepath)
+    elif which == 1:
+        print("trying seba")
+        convert_SeBa_data_to_T0(ifilepath, metallicity, ofilepath)
+    elif which == 2:
+        print("trying bse")
+        convert_BSE_data_to_T0(ifilepath, metallicity, ofilepath)
+    elif which == 3:
+        print("trying compas")
+        convert_COMPAS_data_to_T0(ifilepath, ofilepath)
+    else:
+        print("Not set yet")
