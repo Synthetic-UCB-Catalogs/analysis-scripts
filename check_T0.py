@@ -34,7 +34,9 @@
 
 import rapid_code_load_T0 as load
 
+# + [markdown] jp-MarkdownHeadingCollapsed=true
 # #### First we check BSE
+# -
 
 BSE_T0 = load.convert_BSE_data_to_T0(
     ifilepath="data/pilot_runs_raw_data/BSE/fiducial/BinaryRun.dat", 
@@ -46,7 +48,9 @@ BSE_T0
 
 # #### Ok -- a to do for BSE is to extract the events
 
+# + [markdown] jp-MarkdownHeadingCollapsed=true
 # #### Next up is COMPAS
+# -
 
 COMPAS_T0 = load.convert_COMPAS_data_to_T0(
     ifilepath="data/pilot_runs_raw_data/COMPAS/COMPAS_pilot.h5",
@@ -75,10 +79,14 @@ COSMIC_T0_basic = load.convert_COSMIC_data_to_T0(
     outputpath="data/T0_format_pilot/COSMIC/basic/", 
     hdf5_filename="COSMIC_T0.hdf5")
 
+# +
 COSMIC_T0_basic_RLO = COSMIC_T0_basic.loc[COSMIC_T0_basic.event.isin([31, 32, 511, 512, 513, 52, 53])]
+COSMIC_T0_basic_event0 = COSMIC_T0_basic.loc[COSMIC_T0_basic.event.isin([0])]
+
 for id in COSMIC_T0_basic_RLO.ID.unique()[:10]:
     print(COSMIC_T0_basic.loc[COSMIC_T0_basic.ID == id][['ID', 'time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor']])
     print()
+# -
 
 # ##### need to make ZAMS event=13
 # ##### for ID 3299: need to fix events to read as CE onset from time 12478.81 and CE merger; only the event needs to be updated since the masses and semimajor axies are good. 
