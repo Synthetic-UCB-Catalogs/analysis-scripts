@@ -268,6 +268,24 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     ID = np.arange(0, len(dat.UID.unique()), 1)
     UID_counts = dat.UID.value_counts().sort_index()
     dat["ID"] = np.repeat(ID, UID_counts)
+
+    # drop the 3's for common envelopes
+    CE1_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1)].ID
+    #t_RL1 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE1_IDs))].time.values
+    #t_CE1 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE1_IDs))].time.values
+    #t_common1 = np.intersect1d(t_RL1, t_CE1)
+
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)) & (dat.ID.isin(CE1_IDs)))]
+
+    CE2_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_2 > 1)].ID
+    t_RL2 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE2_IDs))].time.values
+    t_CE2 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE2_IDs))].time.values
+    t_common2 = np.intersect1d(t_RL2, t_CE2)
+
+    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common2)) & (dat.ID.isin(CE2_IDs)))]
+    
+    # drop the 41's for common envelopes
+    dat = dat.loc[~((dat.event == 41) & (dat.event.shift() == 41))]
     
     dat = dat[["ID","UID","time","event",
                "semiMajor","eccentricity","type1",
