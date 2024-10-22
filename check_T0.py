@@ -48,9 +48,7 @@ BSE_T0
 
 # #### Ok -- a to do for BSE is to extract the events
 
-# + [markdown] jp-MarkdownHeadingCollapsed=true
 # #### Next up is COMPAS
-# -
 
 COMPAS_T0 = load.convert_COMPAS_data_to_T0(
     ifilepath="data/pilot_runs_raw_data/COMPAS/COMPAS_pilot.h5",
