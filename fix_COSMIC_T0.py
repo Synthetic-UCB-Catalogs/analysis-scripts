@@ -25,10 +25,15 @@ COSMIC_T0_basic = load.convert_COSMIC_data_to_T0(
     outputpath="data/T0_format_pilot/COSMIC/basic/", 
     hdf5_filename="COSMIC_T0.hdf5")
 
-COSMIC_T0_basic[COSMIC_T0_basic.ID == 3326]
+COSMIC_T0_basic[COSMIC_T0_basic.ID == 467096]
 
 dat = pd.read_hdf("data/pilot_runs_raw_data/COSMIC/basic.h5", key='bpp')
 bcm = pd.read_hdf("data/pilot_runs_raw_data/COSMIC/basic.h5", key='bcm')
+
+dat.loc[dat.bin_num == 467096][['tphys', 'kstar_1', 'kstar_2', 'mass_1', 'mass_2', 'RRLO_1', 'RRLO_2', 'porb', 'evol_type']]
+
+
+
 
 # +
 dat = dat.rename(

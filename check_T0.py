@@ -81,7 +81,7 @@ COSMIC_T0_basic = load.convert_COSMIC_data_to_T0(
 COSMIC_T0_basic_RLO = COSMIC_T0_basic.loc[COSMIC_T0_basic.event.isin([31, 32, 511, 512, 513, 52, 53])]
 COSMIC_T0_basic_event0 = COSMIC_T0_basic.loc[COSMIC_T0_basic.event.isin([0])]
 
-for id in COSMIC_T0_basic_RLO.ID.unique()[:10]:
+for id in COSMIC_T0_basic_event0.ID.unique()[:10]:
     print(COSMIC_T0_basic.loc[COSMIC_T0_basic.ID == id][['ID', 'time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor']])
     print()
 # -

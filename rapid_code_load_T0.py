@@ -177,12 +177,20 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() > dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() > dat.kstar_2), "event"] = 12
+    dat.loc[(dat.evol_type == 2) & (dat.kstar_2 < 10), "event"] = 12
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 32
     dat.loc[(dat.evol_type == 3) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 33
-    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 41
-    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 42
-    dat.loc[(dat.evol_type == 4) & (dat.kstar_1 > 7) & (dat.kstar_2 > 7) & (dat.RRLO_1 == 0.99) & (dat.RRLO_2 == 0.99), "event"] = 43
+   
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1.shift() > 1) & (dat.period > 0), "event"] = 41
+    dat.loc[(dat.evol_type == 4) & (dat.evol_type.shift(2) == 3) & (dat.RRLO_1.shift(2) > 1) & (dat.period > 0), "event"] = 41
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_1.shift(2) >= 1) & (dat.time.shift() == dat.time) & (dat.period > 0), "event"] = 41
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_2.shift() > 1) & (dat.period > 0), "event"] = 42   
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_2.shift() > 1) & (dat.period > 0), "event"] = 42   
+    dat.loc[(dat.evol_type == 4) & (dat.evol_type.shift(2) == 3) & (dat.RRLO_2.shift(2) > 1) & (dat.period > 0), "event"] = 42
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_2.shift(2) >= 1) & (dat.time.shift() == dat.time) & (dat.period > 0), "event"] = 42
+    dat.loc[(dat.evol_type == 4) & (dat.RRLO_2.shift() > 1) & (dat.period > 0), "event"] = 42   
+    dat.loc[(dat.evol_type == 4) & (dat.kstar_1 >= 7) & (dat.kstar_2 >= 7) & (dat.RRLO_1 >= 0.99) & (dat.RRLO_2 >= 0.99), "event"] = 43
     dat.loc[(dat.evol_type == 4) & (dat.period == 0), "event"] = 52
     dat.loc[(dat.evol_type == 5), "event"] = 53
     dat.loc[(dat.evol_type == 6) & ((dat.RRLO_1 > 1) | (dat.RRLO_2 > 1)), "event"] = 52
@@ -190,9 +198,10 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 < 1), "event"] = 511
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1) & (dat.RRLO_2 > 1), "event"] = 513
+    dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 < 1) & (dat.RRLO_2 > 1) & (dat.kstar_1.shift(-1) >= 7) & (dat.kstar_2.shift(-1) >= 7), "event"] = 513    
     dat.loc[(dat.evol_type == 8) & (dat.RRLO_1 > 1) & (dat.period > 0), "event"] = 41
     dat.loc[(dat.evol_type == 8) & (dat.RRLO_2 > 1) & (dat.period > 0), "event"] = 42
-    dat.loc[(dat.evol_type == 8) & (dat.kstar_1 >= 7) & (dat.kstar_2 >= 7) & (dat.RRLO_1 == 0.99) & (dat.RRLO_2 == 0.99), "event"] = 43
+    dat.loc[(dat.evol_type == 8) & (dat.kstar_1 >= 7) & (dat.kstar_2 >= 7) & (dat.RRLO_1 >= 0.99) & (dat.RRLO_2 >= 0.99), "event"] = 43
     dat.loc[(dat.evol_type == 8) & (dat.period == 0), "event"] = 52
     dat.loc[(dat.evol_type == 8) & (dat.period == -1), "event"] = 52
     dat.loc[(dat.evol_type == 9) & (dat.kstar_1 == 15), "event"] = 211
@@ -217,11 +226,13 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
 
     dat.loc[(dat.RRLO_2 == -2.0), "event"] = 83
     # drop the extra line for successful common envelope ejections that happens in COSMIC
-    dat = dat.loc[~((dat.event == 0) & (dat.evol_type == 4))]
+    dat = dat.loc[~((dat.event == 41) & (dat.event.shift() == 41))]
+    dat = dat.loc[~((dat.event == 42) & (dat.event.shift() == 42))]
+    dat = dat.loc[~((dat.event == 43) & (dat.event.shift() == 43))]
 
     # drop spurious lines where COSMIC logs a type change when there isn't one
-    dat = dat.loc[~((dat.evol_type == 2) & (dat.kstar_1 == dat.kstar_1.shift()))]
-    dat = dat.loc[~((dat.evol_type == 2) & (dat.kstar_2 == dat.kstar_2.shift()))]
+    #dat = dat.loc[~((dat.evol_type == 2) & (dat.kstar_1 == dat.kstar_1.shift()))]
+    #dat = dat.loc[~((dat.evol_type == 2) & (dat.kstar_2 == dat.kstar_2.shift()))]
 
     # drop spurious lines where COSMIC doesn't log the disruption
     dat = dat.loc[~((dat.evol_type == 8) & (dat.semiMajor < 0) & (dat.RRLO_2 >= 1))]
@@ -268,24 +279,6 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     ID = np.arange(0, len(dat.UID.unique()), 1)
     UID_counts = dat.UID.value_counts().sort_index()
     dat["ID"] = np.repeat(ID, UID_counts)
-
-    # drop the 3's for common envelopes
-    CE1_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_1 > 1)].ID
-    #t_RL1 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE1_IDs))].time.values
-    #t_CE1 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE1_IDs))].time.values
-    #t_common1 = np.intersect1d(t_RL1, t_CE1)
-
-    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common1)) & (dat.ID.isin(CE1_IDs)))]
-
-    CE2_IDs = dat.loc[(dat.evol_type == 7) & (dat.RRLO_2 > 1)].ID
-    t_RL2 = dat.loc[(dat.evol_type == 3) & (dat.ID.isin(CE2_IDs))].time.values
-    t_CE2 = dat.loc[(dat.evol_type == 7) & (dat.ID.isin(CE2_IDs))].time.values
-    t_common2 = np.intersect1d(t_RL2, t_CE2)
-
-    dat = dat.loc[~((dat.evol_type == 3) & (dat.time.isin(t_common2)) & (dat.ID.isin(CE2_IDs)))]
-    
-    # drop the 41's for common envelopes
-    dat = dat.loc[~((dat.event == 41) & (dat.event.shift() == 41))]
     
     dat = dat[["ID","UID","time","event",
                "semiMajor","eccentricity","type1",

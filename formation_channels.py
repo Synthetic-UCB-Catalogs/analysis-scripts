@@ -48,18 +48,25 @@ def first_interaction_channels(d):
     -------
     
     '''
+    RLO_1 = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])]
+    nonRLO = d.loc[~d.ID.isin(RLO_1.ID)].ID.unique()
+    
+    merger = RLO_1.loc[RLO_1.event.isin([52])].ID
+    RLO_1 = RLO_1.loc[~RLO_1.ID.isin(merger)]
 
-    RLO_1 = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])].groupby('ID', as_index=False).first()
+    CE_mask = RLO_1['tphys'] == RLO_1['tphys'].shift()
+    RLO_1 = RLO_1[CE_mask].reset_index(drop=True)
 
-    SMT_1 = RLO_1.loc[RLO_1.event == 31].ID
-    SMT_2 = RLO_1.loc[RLO_1.event == 32].ID
     CE_1 = RLO_1.loc[RLO_1.event == 511].ID
     CE_2 = RLO_1.loc[RLO_1.event == 512].ID
     DCCE = RLO_1.loc[RLO_1.event == 513].ID
-    # need to check on whether systems go 511 --> 52. 
-    merger = RLO_1.loc[RLO_1.event.isin([52, 53])].ID
 
-    nonRLO = d.loc[~d.ID.isin(RLO_1.ID)].ID.unique()
+    #SMT = RLO_1.loc[~RLO_1.ID.isin([CE_1, CE_2, DCCE])]
+    SMT_1 = SMT.loc[(RLO_1.event == 31)].ID
+    SMT_2 = SMT.loc[(RLO_1.event == 32)].ID
+    
+    
+    
 
     first_RLO = {'SMT_1': SMT_1,
                  'SMT_2': SMT_2,
