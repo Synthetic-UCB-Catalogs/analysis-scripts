@@ -64,6 +64,69 @@ with open(filename, 'r') as f:
 # %%
 df = pd.read_csv(filename, skiprows=2, index_col=False)
 
+# reduce the ranges of "time" and "Teff1"/"Teff2": convert to Gyr and kiloK, respectively;
+conversion_facs = {
+    'time': 1000.,
+    'Teff1': 1000.,
+    'Teff2': 1000.
+}
+
+for col,fac in conversion_facs.items():
+    df[col] /= fac
+
+# (-1) is NaN and (-2) is missing which should be encoded as empty strings ''
+df.replace('^\s*$', -2., inplace=True, regex=True)
+df.fillna(-1., inplace=True)
+
 df.head()
+
+# %%
+# 1. one-hot encoding for the categorical variables [event,type1,type2]
+# 2. convert time to Gyr
+columns = ['event', 'type1', 'type2']
+
+for col in columns:
+    df[col] = df[col].astype(str)
+
+df_onehot = pd.get_dummies(df, columns=columns, dtype=float)
+
+df_onehot.head()
+
+# %%
+unique_IDs = df_onehot.ID.unique()
+unique_UIDs = df_onehot.UID.unique()
+
+print(
+    '# IDs: {:d}\n# unique IDs: {:d}'.format(
+        len(unique_IDs), len(unique_UIDs)
+    )
+)
+
+# %%
+k = 0
+systems = {}
+
+for unique_id in unique_UIDs:
+    if k > 9:
+        break
+    ids = df_onehot[df_onehot.UID == unique_id].ID.unique()
+    if len(ids) == 1:
+        continue
+    systems[str(unique_id)] = ids
+    k += 1
+
+print('The first {:d} systems with 2+ IDs for one UID\n'.format(k))
+print('UID:\t\t IDs')
+for uid,ids in systems.items():
+    print('{}\t'.format(uid), *ids)
+
+# %%
+seq_len = 5
+
+rng = np.random.default_rng()
+
+random_id = rng.choice(unique_IDs)
+
+(df[df.ID == random_id]).sort_values('time')
 
 # %%
