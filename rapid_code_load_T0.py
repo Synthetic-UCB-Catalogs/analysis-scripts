@@ -114,6 +114,60 @@ def load_IC(ifilepath):
 ### Functions to convert from original code outputs into T0.hdf5 format
 #######################################################################
 
+def convert_ComBinE_csv_to_h5(ifilepath, outputpath=None, hdf5_filename="ComBinE_T0.hdf5"):
+    """Read in COSMIC data and convert to L0
+    
+    Parameters
+    ----------
+    ifilepath : `str`
+        name of file including path
+
+    Returns
+    -------
+    dat : `pandas.DataFrame`
+        all data in T0 format
+        
+    header : `pandas.DataFrame`
+        header for dat
+    """
+
+    col_standard = ["ID","UID","SID","time","event",
+                    "semiMajor","eccentricity","type1",
+                    "mass1","radius1","Teff1","massHeCore1",
+                    "type2","mass2","radius2","Teff2","massHeCore2",
+                    "envBindEn","massCOCore1","massCOCore2",
+                    "radiusRL1","radiusRL2","period",
+                    "luminosity1","luminosity2"]
+    # load the data
+    dat = pd.read_csv(ifilepath, skiprows=6, names=col_standard)
+    lines_number = 6
+    with open(ifilepath) as input_file:
+        head = [next(input_file) for _ in range(lines_number)]
+        T0_info = head[4].replace(" ", "").split(",")
+    
+        header = {"cofVer" : float(T0_info[0]), 
+                  "cofLevel": T0_info[1],
+                  "cofExtension": "None", 
+                  "bpsName": T0_info[3],
+                  "bpsVer": T0_info[4], 
+                  "contact": T0_info[5], 
+                  "NSYS": int(T0_info[6]), 
+                  "NLINES": int(T0_info[7]),
+                  "Z": float(T0_info[8].replace("\n",""))}
+    #header = pd.DataFrame.from_dict([header_info])
+
+    # Save in hdf5 format
+    if outputpath is None:
+        outputpath = os.path.split(ifilepath)[0]
+    ofilepath = os.path.join(outputpath, hdf5_filename)
+    dat.to_hdf(ofilepath, key='data', mode='w')
+    with pd.HDFStore(ofilepath) as hdf_store:
+        hdf_store.put('data', dat, format='table') 
+        hdf_store.get_storer('data').attrs.metadata = header
+    
+    return dat, header
+
+
 def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filename="COSMIC_T0.hdf5"):
     """Read in COSMIC data and convert to L0
     

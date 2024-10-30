@@ -31,6 +31,13 @@ def select_evolutionary_states(d):
 
     WDMS = pd.concat([WDMS1, WDMS2])
     DWD = d.loc[(d.type1.isin([21,22,23])) & (d.type2.isin([21,22,23])) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
+    
+    if len(DWD) == 0:
+        WDMS1 = d.loc[((d.type1 == 2) & (d.type2 == 121)) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
+        WDMS2 = d.loc[((d.type2 == 2) & (d.type1 == 121)) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
+    
+        WDMS = pd.concat([WDMS1, WDMS2])
+        DWD = d.loc[(d.type1 == 2) & (d.type2 == 2) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
 
     return ZAMS, WDMS, DWD
 
@@ -73,18 +80,18 @@ def first_interaction_channels(d):
 
     
 
-def select_final_state_ids(d):
-    '''Sets the final state based on the evolution
-
-    Parameters
-    ----------
-    d : `pandas.DataFrame`
-        T0 data with all events listed
-
-    Returns
-    -------
-
-    '''
+#def select_final_state_ids(d):
+#    '''Sets the final state based on the evolution
+#
+#    Parameters
+#    ----------
+#    d : `pandas.DataFrame`
+#        T0 data with all events listed
+#
+#    Returns
+#    -------
+#
+#    '''
 
 
 def select_channels(d):
