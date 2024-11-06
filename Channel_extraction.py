@@ -26,9 +26,13 @@ from collections import Counter
 
 import formation_channels as fc
 from rapid_code_load_T0 import convert_BSE_data_to_T0, convert_COMPAS_data_to_T0, convert_COSMIC_data_to_T0, convert_SeBa_data_to_T0, load_T0_data
-
-
 # -
+COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
+METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
+COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
+SeBa_T0 = convert_SeBa_data_to_T0('data/pilot_runs_raw_data/SeBa/SeBa-simple.data', metallicity=0.02)
+
+
 def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
 
@@ -53,13 +57,15 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
         print("warning, you missed ids:", np.setxor1d(all_IDs, id_check))
         print(len(all_IDs), len(id_check))
 
-    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.4, 0.85), return_fmt='hex')
+    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.6, 0.9), return_fmt='hex')
     CE_colors = cmr.take_cmap_colors('cmr.sunburst', 3, cmap_range=(0.3, 0.9), return_fmt='hex')
-    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.35, 0.85), return_fmt='hex')
+    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.35, 0.9), return_fmt='hex')
 
     keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
     colors_list = [SMT_colors, CE_colors, other_colors]
-    plt.figure(figsize=(6,4.8))
+
+    fig = plt.figure(figsize=(6,4.9))
+    
     for colors, keys in zip(colors_list, keys_list):
         for c, k, ii in zip(colors, keys, range(len(colors))):
             ZAMS_select = init_q.loc[(init_q.ID.isin(first_RLO[k]))]
@@ -76,8 +82,10 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
     plt.xscale('log')
     plt.legend(loc=(0.0, 1.01), ncol=3, prop={'size':9})
     plt.yscale('log')
-    plt.xlim(min(init_q.porb)-0.1, max(init_q.porb))
-    plt.ylim(min(init_q.mass1)-0.05, max(init_q.mass1)+0.5)
+    
+    
+    plt.xlim(1, 10000)
+    plt.ylim(0.7, 13)
     
     plt.xlabel('orbital period [day]')
     plt.ylabel('M$_1$ [Msun]')
@@ -88,21 +96,21 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
 
     return first_RLO
 
-
-COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
-METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
-COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
-
+first_RLO_COSMIC_01 = get_first_RLO_figure(COSMIC_T0, q=0.08, savefig='COSMIC_first_RLO_channels_qinit_01.png')
 first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
 first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
 
+first_RLO_METISSE_01 = get_first_RLO_figure(METISSE_T0, q=0.08, savefig='METISSE_first_RLO_channels_qinit_01.png')
 first_RLO_METISSE_05 = get_first_RLO_figure(METISSE_T0, q=0.49, savefig='METISSE_first_RLO_channels_qinit_05.png')
 first_RLO_METISSE_09 = get_first_RLO_figure(METISSE_T0, q=0.88, savefig='METISSE_first_RLO_channels_qinit_09.png')
 
+first_RLO_COMPAS_01 = get_first_RLO_figure(COMPAS_T0, q=0.08, savefig='COMPAS_first_RLO_channels_qinit_01.png')
 first_RLO_COMPAS_05 = get_first_RLO_figure(COMPAS_T0, q=0.49, savefig='COMPAS_first_RLO_channels_qinit_05.png')
 first_RLO_COMPAS_09 = get_first_RLO_figure(COMPAS_T0, q=0.88, savefig='COMPAS_first_RLO_channels_qinit_09.png')
 
-
+first_RLO_SeBa_01 = get_first_RLO_figure(SeBa_T0, q=0.08, savefig='SeBa_first_RLO_channels_qinit_01.png')
+first_RLO_SeBa_05 = get_first_RLO_figure(SeBa_T0, q=0.49, savefig='SeBa_first_RLO_channels_qinit_05.png')
+first_RLO_SeBa_09 = get_first_RLO_figure(SeBa_T0, q=0.88, savefig='SeBa_first_RLO_channels_qinit_09.png')
 
 
 

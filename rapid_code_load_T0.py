@@ -406,8 +406,8 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
                "stellar_indentity2", "star_type2", "mass2", "radius2", "Teff2", "massHeCore2"])
 
     # compute the Roche radii at all times
-    dat["RRLO_1"] = Eggleton_Roche_lobe(dat["mass1"]/dat["mass2"], dat["semiMajor"])
-    dat["RRLO_2"] = Eggleton_Roche_lobe(dat["mass2"]/dat["mass1"], dat["semiMajor"])
+    dat["RRLO_1"] = dat["radius1"] / Eggleton_Roche_lobe(dat["mass1"]/dat["mass2"], dat["semiMajor"])
+    dat["RRLO_2"] = dat["radius2"] / Eggleton_Roche_lobe(dat["mass2"]/dat["mass1"], dat["semiMajor"])
 
     # convert UID to ID
     ID = np.arange(0, len(dat.UID.unique()), 1)
@@ -455,29 +455,37 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
     # convert mass transfer events to L0 events
 
     #### Should only use SID for these collections
-    dat.loc[dat.time == 0.0, "event"] = -1
+    dat.loc[dat.time == 0.0, "event"] = 13
     dat.loc[(dat.star_type1.shift() < dat.star_type1), "event"] = 11
     dat.loc[(dat.star_type2.shift() < dat.star_type2), "event"] = 12
-    dat.loc[(dat.SID == 3) & (dat.RRLO_1 > 1), "event"] = 31
-    dat.loc[(dat.SID == 3) & (dat.RRLO_2 > 1), "event"] = 32
+    dat.loc[(dat.SID == 3) & (dat.RRLO_1 > dat.RRLO_2), "event"] = 31
+    dat.loc[(dat.SID == 3) & (dat.RRLO_2 > dat.RRLO_1), "event"] = 32
 
     dat.loc[(dat.event.shift() == 31) & (dat.SID == 2), "event"] = 41
     dat.loc[(dat.event.shift() == 32) & (dat.SID == 2), "event"] = 42
 
-    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_1 > 1), "event"] = 511
-    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_2 > 1), "event"] = 512
+    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_1 > dat.RRLO_2), "event"] = 511
+    dat.loc[(dat.SID.isin([5,9])) & (dat.RRLO_2 > dat.RRLO_1), "event"] = 512
     dat.loc[(dat.SID == 6), "event"] = 513
 
     # 4 is contact
     dat.loc[(dat.SID == 4), "event"] = 53
-
+    
     # 7 is a merger
     dat.loc[(dat.SID == 7), "event"] = 52
 
+    # log WD RLO
+    dat.loc[(dat.mass_transfer_type == 4) & (dat.RRLO_1 > 1) & (dat.type1.isin([21, 22, 23]) & (dat.type2.isin([21,22,23]))), "event"] = 31
+    dat.loc[(dat.mass_transfer_type == 4) & (dat.RRLO_2 > 1) & (dat.type1.isin([21, 22, 23]) & (dat.type2.isin([21,22,23]))), "event"] = 31
+    dat.loc[(dat.mass_transfer_type == 7) & (dat.type1.isin([21, 22, 23]) & (dat.type2.isin([21,22,23]))), "event"] = 53
+    dat.loc[(dat.SID == 7) & (dat.type1.isin([21, 22, 23]) & (dat.type2.isin([21,22,23]))) & (dat.semiMajor == 0), "event"] = 52
+    
     dat.loc[(dat.time == max(dat.time)), "event"] = 81
     dat.loc[(dat.time == max(dat.time)) & (dat.star_type1 > 11) & (dat.star_type2 > 11), "event"] = 82
     dat.loc[(dat.time == max(dat.time)) & (dat.semiMajor == 0.0), "event"] = 84
 
+    # drop extra RLO lines
+    dat = dat.loc[~((dat.event == 31) & (dat.event.shift() == 31) & (dat.type1 == dat.type1.shift()))]
 
     dat = dat[["ID","UID","SID","time","event",
                "semiMajor","eccentricity","type1",
