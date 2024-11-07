@@ -53,9 +53,9 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
         print("warning, you missed ids:", np.setxor1d(all_IDs, id_check))
         print(len(all_IDs), len(id_check))
 
-    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.4, 0.85), return_fmt='hex')
+    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.6, 0.85), return_fmt='hex')
     CE_colors = cmr.take_cmap_colors('cmr.sunburst', 3, cmap_range=(0.3, 0.9), return_fmt='hex')
-    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.35, 0.85), return_fmt='hex')
+    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.6, 0.95), return_fmt='hex')
 
     keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
     colors_list = [SMT_colors, CE_colors, other_colors]
@@ -89,12 +89,117 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
     return first_RLO
 
 
-COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
+# ### First let's load the different pilot runs for COSMIC
+
+COSMIC_T0_basic, COSMIC_header_basic = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
+COSMIC_T0_basic1b, COSMIC_header_basic1b = load_T0_data('data/T0_format_pilot/COSMIC/basic1b/COSMIC_T0.hdf5')
+COSMIC_T0_intermediate, COSMIC_header_intermediate = load_T0_data('data/T0_format_pilot/COSMIC/intermediate/COSMIC_T0.hdf5')
+
+first_RLO_COSMIC_b_05 = get_first_RLO_figure(COSMIC_T0_basic, q=0.49, savefig='COSMIC_b_first_RLO_channels_qinit_05.png')
+first_RLO_COSMIC_b1_05 = get_first_RLO_figure(COSMIC_T0_basic1b, q=0.49, savefig='COSMIC_b1_first_RLO_channels_qinit_05.png')
+first_RLO_COSMIC_i_05 = get_first_RLO_figure(COSMIC_T0_intermediate, q=0.49, savefig='COSMIC_b1_first_RLO_channels_qinit_05.png')
+
+
+# ### There are only slight differences between basic, basic1b, and intermediate
+#
+# #### We can look at the different evolutions to see what is happening with the different outcomes of the first RLO 
+
+COSMIC_b_05_merger = COSMIC_T0_basic.loc[COSMIC_T0_basic.ID.isin(first_RLO_COSMIC_b_05['merger'])]
+
+print(len(COSMIC_b_05_merger.ID.unique()))
+
+# +
+print_cols = ["time", "event", "type1", "type2", "mass1", "mass2", "semiMajor"]
+
+for ID in COSMIC_b_05_merger.ID.unique()[::100]:
+    print(COSMIC_b_05_merger.loc[COSMIC_b_05_merger.ID == ID][print_cols])
+# -
+
+# ### We can also look at how the WDMS population is affected for each channel
+
+# +
+ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=COSMIC_T0_basic)
+
+ZAMS_1b, WDMS_1b, DWD_1b = fc.select_evolutionary_states(d=COSMIC_T0_basic1b)
+
+ZAMS_i, WDMS_i, DWD_i = fc.select_evolutionary_states(d=COSMIC_T0_intermediate)
+
+# +
+for channel in ['SMT_1', 'CE_1', 'nonRLO']:
+    WDMS_select = WDMS.loc[WDMS.ID.isin(first_RLO_COSMIC_b_05[channel])]
+    plt.scatter(WDMS_select.mass1, WDMS_select.mass2, label=channel+', basic', s=6, marker='o')
+
+    WDMS_select = WDMS_1b.loc[WDMS_1b.ID.isin(first_RLO_COSMIC_b1_05[channel])]
+    plt.scatter(WDMS_select.mass1, WDMS_select.mass2, label=channel+', basic 1b', s=2, marker='s')
+
+plt.xlabel('mass 1 [Msun]')
+plt.ylabel('mass 2 [Msun]')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('COSMIC_compare_basic_basic1b_m1_m2.png', facecolor='white')
+
+# +
+for channel in ['SMT_1', 'CE_1', 'nonRLO']:
+    WDMS_select = WDMS.loc[WDMS.ID.isin(first_RLO_COSMIC_b_05[channel])]
+    plt.scatter(WDMS_select.mass1, WDMS_select.mass2, label=channel+', basic', s=6, marker='o')
+
+    WDMS_select = WDMS_i.loc[WDMS_1b.ID.isin(first_RLO_COSMIC_i_05[channel])]
+    plt.scatter(WDMS_select.mass1, WDMS_select.mass2, label=channel+', intermediate', s=2, marker='s')
+
+plt.xlabel('mass 1 [Msun]')
+plt.ylabel('mass 2 [Msun]')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('COSMIC_compare_basic_intermediate_m1_m2.png', facecolor='white')
+
+# +
+for channel in ['SMT_1', 'CE_1', 'nonRLO']:
+    WDMS_select = WDMS.loc[WDMS.ID.isin(first_RLO_COSMIC_b_05[channel])]
+    plt.scatter(WDMS_select.semiMajor, WDMS_select.mass1, label=channel, s=2)
+
+    WDMS_select = WDMS_1b.loc[WDMS_1b.ID.isin(first_RLO_COSMIC_b1_05[channel])]
+    plt.scatter(WDMS_select.semiMajor, WDMS_select.mass1, label=channel+', basic 1b', s=2, marker='s')
+
+
+plt.ylabel('mass 1 [Msun]')
+plt.xlabel('semimajor axis [Rsun]')
+plt.xscale('log')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('COSMIC_compare_basic_basic1b_sep_m1.png', facecolor='white')
+
+# +
+for channel in ['SMT_1', 'CE_1', 'nonRLO']:
+    WDMS_select = WDMS.loc[WDMS.ID.isin(first_RLO_COSMIC_b_05[channel])]
+    plt.scatter(WDMS_select.semiMajor, WDMS_select.mass1, label=channel, s=2)
+
+    WDMS_select = WDMS_i.loc[WDMS_1b.ID.isin(first_RLO_COSMIC_i_05[channel])]
+    plt.scatter(WDMS_select.semiMajor, WDMS_select.mass1, label=channel+', intermediate', s=2, marker='s')
+
+
+plt.ylabel('mass 1 [Msun]')
+plt.xlabel('semimajor axis [Rsun]')
+plt.xscale('log')
+plt.legend()
+
+plt.tight_layout()
+plt.savefig('COSMIC_compare_basic_intermediate_sep_m1.png', facecolor='white')
+# -
+
+
+
+
+
+# ### We can also compare between codes
+
 METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
 COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
 
-first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
-first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
+first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0_basic, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
+first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0_basic, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
 
 first_RLO_METISSE_05 = get_first_RLO_figure(METISSE_T0, q=0.49, savefig='METISSE_first_RLO_channels_qinit_05.png')
 first_RLO_METISSE_09 = get_first_RLO_figure(METISSE_T0, q=0.88, savefig='METISSE_first_RLO_channels_qinit_09.png')
