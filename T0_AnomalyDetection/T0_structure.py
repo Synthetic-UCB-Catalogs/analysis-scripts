@@ -114,19 +114,27 @@ for unique_id in unique_UIDs:
     k += 1
 
 print('The first {:d} systems with 2+ IDs for one UID\n'.format(k))
-print('UID:\t\t IDs')
+print('UID:\t\t IDs:')
 for uid,ids in systems.items():
     print('{}\t'.format(uid), *ids)
 
 
 # %%
-hist_cols = ['mass1', 'mass2', 'radius1', 'radius2']
+log_cols = [
+    'mass1', 'mass2', 'radius1', 'radius2', 'semiMajor', 'Teff1', 'Teff2', 'massHecore1', 'massHecore2', 'eccentricity' 
+]
 
-for col in hist_cols:
+linear_cols = [
+    'massHecore1', 'massHecore2', 'eccentricity'
+]
+
+eps = 1e-16
+
+for col in log_cols:
 
     fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
-
-    ax.hist(np.log10(df[col]), bins=100, density=True)
+    
+    ax.hist(np.log10(df[col] + eps), bins=100, density=True)
     
     ax.grid(True,linestyle=':',linewidth='1.')
     ax.xaxis.set_ticks_position('both')
@@ -138,7 +146,20 @@ for col in hist_cols:
     
     fig.tight_layout()
 
-# %%
-df['mass1'].shape
+for col in linear_cols:
+
+    fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
+
+    ax.hist(df[col], bins=100, density=True)
+    
+    ax.grid(True,linestyle=':',linewidth='1.')
+    ax.xaxis.set_ticks_position('both')
+    ax.yaxis.set_ticks_position('both')
+    ax.tick_params('both',length=3,width=0.5,which='both',direction = 'in',pad=10)
+    
+    ax.set_xlabel(col)
+    ax.set_ylabel('counts')
+    
+    fig.tight_layout()
 
 # %%

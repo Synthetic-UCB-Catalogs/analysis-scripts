@@ -80,15 +80,10 @@ class DataGenerator(keras.utils.Sequence):
         # reduce the ranges of "time" and "Teff1"/"Teff2": convert to Gyr and kiloK, respectively;
         conversion_facs = {
             'time': 1000.,
-            'Teff1': 1000.,
-            'Teff2': 1000.
         }
-        log_columns = ['semiMajor', 'radius1', 'radius1']
-        for col in log_columns:
-            df[col] = np.log10(df[col])
-        
         for col,fac in conversion_facs.items():
             df[col] /= fac
+        
         
         # (-1) is NaN and (-2) is missing which should be encoded as empty strings ''
         df.replace('^\s*$', -2., inplace=True, regex=True)
@@ -97,11 +92,21 @@ class DataGenerator(keras.utils.Sequence):
         # 1. one-hot encoding for the categorical variables [event,type1,type2]
         # 2. convert time to Gyr
         columns = ['event', 'type1', 'type2']
-        
         for col in columns:
             df[col] = df[col].astype(str)
         
         self.df_onehot = pd.get_dummies(df, columns=columns, dtype=float)
+
+        log_columns = ['mass1', 'mass2', 'radius1', 'radius2', 'semiMajor', 'Teff1', 'Teff2', 'massHecore1', 'massHecore2']
+        log_columns_Re = [f'log_{col}_Re' for col in log_columns]
+        log_columns_Im = [f'log_{col}_Im' for col in log_columns]
+        eps = 1e-16
+        for col,im_col in zip(log_columns,log_columns_Im):
+            complex_log = np.log10(eps + self.df_onehot[col] + 0*1j)
+            self.df_onehot[im_col] = np.imag(complex_log)
+            self.df_onehot[col] = np.real(complex_log)
+        self.df_onehot.rename(columns=dict(zip(log_columns,log_columns_Re)), inplace=True)
+        
         self.features = self.df_onehot.columns.values[2:]
         self.unique_IDs = self.df_onehot.ID.unique()
 
@@ -121,12 +126,12 @@ class DataGenerator(keras.utils.Sequence):
         for random_id in sys_indices:
             random_sys = (self.df_onehot[self.df_onehot.ID == random_id]).sort_values('time')[self.features]
             len_sys = len(random_sys)
-            random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
-            shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
+            # random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
+            # shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
             
             random_start = self.rng.integers(len_sys - self.seq_len + 1)
             batches.append(
-                shifted_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
+                random_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
             )
             
         
@@ -142,7 +147,9 @@ class EncoDecLSTM(keras.Model):
         super(EncoDecLSTM, self).__init__()
         self.encoder = layers.LSTM(units, return_state=True)
         self.lstm_cell = layers.LSTMCell(units)
-        self.dense1 = layers.Dense(units, activation='relu') 
+        self.dense1 = layers.Dense(units, activation='relu')
+
+        #self.FC_hidden = [layers.Dense(size, activation='relu') for size in [2*units, int(units/2), 2, int(units/2), 2*units]]
 
     def build(self, input_dim):
         
@@ -150,13 +157,21 @@ class EncoDecLSTM(keras.Model):
         self.dense2 = layers.Dense(input_dim[-1], activation=None)
         #self.decoder = layers.LSTM(input_dim[-1], activation=None, return_sequences=True, return_state=False)
         
-    def call(self, input_tensor):
+    def call(self, input_tensor, training=False):
 
-        output, state_h, state_c = self.encoder(input_tensor)
+        output, state_h, state_c = self.encoder(input_tensor, training=training)
+
+        # x = tf.concat([state_h, state_c], axis=1)
+        # for el in self.FC_hidden:
+        #     x = el(x)
+
+        # print(x.shape)
+
+        # state_h, state_c = tf.split(x, 2, axis=1)
 
         sequence = []
         for i in range(self.input_shape[1]):
-            output,(state_h,state_c) = self.lstm_cell(input_tensor[:,i,:], [state_h, state_c])
+            output,(state_h,state_c) = self.lstm_cell(output, [state_h, state_c], training=training)
             # output = self.dense1(output)
             # output = self.dense2(output)
             sequence.append(self.dense2(self.dense1(output)))
@@ -172,14 +187,14 @@ class EncoDecLSTM(keras.Model):
         return keras.Model(inputs=[x], outputs=self.call(x))
 
 # %%
-units = 16
-epochs = 10
+units = 64
+epochs = 15
 steps_per_epoch = 100
 filename = './SEVN/MIST/setA/Z0.02/sevn_mist'
 
 
 train_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=steps_per_epoch)
-val_gen = DataGenerator(filename, batch_size=2048, steps_per_epoch=1)
+val_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=1)
 
 model = EncoDecLSTM(units)
 
@@ -209,6 +224,78 @@ history = model.fit(
     x=train_gen, validation_data=val_gen,
     epochs=epochs, verbose=1,
     callbacks=[cp_callback]
+)
+
+# %%
+fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
+
+for key,val in history.history.items():
+
+    ax.plot(np.arange(epochs) + 1, val, label=key)
+
+ax.legend()
+
+ax.grid(True,linestyle=':',linewidth='1.')
+ax.xaxis.set_ticks_position('both')
+ax.yaxis.set_ticks_position('both')
+ax.tick_params('both',length=3,width=0.5,which='both',direction = 'in',pad=10)
+
+ax.set_xlabel('epoch')
+ax.set_ylabel('loss')
+
+fig.tight_layout()
+#fig.savefig('test.pdf')
+
+# %%
+test_gen = DataGenerator(filename, batch_size=1024*16, steps_per_epoch=1)
+test_loss = keras.losses.mse
+
+
+# %%
+test_gen.on_epoch_end()
+X,y = test_gen[0]
+
+raw_errors = model.predict(X) - X
+errors = test_loss(X, model.predict(X))
+batch_errors = np.array(
+    tf.math.reduce_mean(errors, axis=-1)
+)
+
+
+# %%
+fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
+
+ax.set_xscale('log')
+ax.set_yscale('log')
+
+bins = np.logspace(np.log10(batch_errors.min()), np.log10(batch_errors.max()), 100)
+#bins=100
+ax.hist(batch_errors, bins=bins, density=True)
+
+ax.grid(True,linestyle=':',linewidth='1.')
+ax.xaxis.set_ticks_position('both')
+ax.yaxis.set_ticks_position('both')
+ax.tick_params('both',length=3,width=0.5,which='both',direction = 'in',pad=10)
+
+ax.set_xlabel('loss')
+ax.set_ylabel('counts')
+
+# %%
+import corner
+
+errors_per_feature = tf.math.reduce_mean(raw_errors, axis=1)
+mean_per_feature = tf.math.reduce_mean(errors_per_feature, axis=0, keepdims=True)
+std_per_feature = tf.math.reduce_std(errors_per_feature, axis=0, keepdims=True)    
+errors_per_feature = (errors_per_feature - mean_per_feature)/std_per_feature
+
+errors_per_feature = np.array(errors_per_feature)
+
+num_toplot = 5
+ranges = zip(-5.*np.ones(num_toplot), 5.*np.ones(num_toplot))
+
+fig = corner.corner(
+    errors_per_feature[:,:5],
+    range=ranges
 )
 
 # %%
