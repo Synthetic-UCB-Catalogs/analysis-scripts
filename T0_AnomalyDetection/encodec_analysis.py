@@ -109,8 +109,6 @@ class DataGenerator(keras.utils.Sequence):
         
         self.features = self.df_onehot.columns.values[2:]
         self.unique_IDs = self.df_onehot.ID.unique()
-        self.df_grouped = self.df_onehot.sort_values(by=['time']).groupby('ID')
-        self.id_counts = self.df_onehot['ID'].value_counts()
 
         if self.shuffle:
             self.rng.shuffle(self.unique_IDs)
@@ -124,25 +122,18 @@ class DataGenerator(keras.utils.Sequence):
         
         sys_indices = self.unique_IDs[index*self.batch_size:(index+1)*self.batch_size]
 
-        # batches = []
-        # for random_id in sys_indices:
-        #     random_sys = (self.df_onehot[self.df_onehot.ID == random_id]).sort_values('time')[self.features]
-        #     len_sys = len(random_sys)
-        #     # random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
-        #     # shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
+        batches = []
+        for random_id in sys_indices:
+            random_sys = (self.df_onehot[self.df_onehot.ID == random_id]).sort_values('time')[self.features]
+            len_sys = len(random_sys)
+            # random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
+            # shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
             
-        #     random_start = self.rng.integers(len_sys - self.seq_len + 1)
-        #     batches.append(
-        #         random_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
-        #     )
-        start_seq = self.rng.integers(0, self.id_counts[sys_indices] - self.seq_len + 1)
-        end_seq = start_seq + self.seq_len
-        
-        batches = [
-            self.df_grouped.get_group(group)[self.features].iloc[start:end].to_numpy()\
-                for group,start,end in zip(sys_indices,start_seq,end_seq)
-        ]
-
+            random_start = self.rng.integers(len_sys - self.seq_len + 1)
+            batches.append(
+                random_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
+            )
+            
         
         return tf.convert_to_tensor(batches),tf.convert_to_tensor(batches)
 
@@ -202,66 +193,18 @@ steps_per_epoch = 100
 filename = './SEVN/MIST/setA/Z0.02/sevn_mist'
 
 
-train_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=steps_per_epoch)
-val_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=1)
-
 model = EncoDecLSTM(units)
 
 MODELS_FOLDER = './chkpoints_units={:02d}_epochs={:02d}'.format(units, epochs)
-LOGS_FOLDER = './logs'
 
-if (os.path.exists(MODELS_FOLDER)):
-    shutil.rmtree(MODELS_FOLDER)
-os.mkdir(MODELS_FOLDER)
+best_epoch = 8
+file_weights = os.path.join(MODELS_FOLDER, 'best_model_{:02d}.weights.h5'.format(best_epoch))
 
-if (os.path.exists(LOGS_FOLDER)):
-    shutil.rmtree(LOGS_FOLDER)
-os.mkdir(LOGS_FOLDER)
-
-cp_callback = keras.callbacks.ModelCheckpoint(
-                filepath=os.path.join(MODELS_FOLDER,'best_model_{epoch:02d}.weights.h5'),
-                save_weights_only=True,
-        save_best_only=True,
-                verbose=1
-        )
-
+model.load_weights(file_weights)
 
 
 # %%
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.001, clipnorm=1.), 
-    loss=keras.losses.MeanSquaredError(),
-)
-
-
-history = model.fit(
-    x=train_gen, validation_data=val_gen,
-    epochs=epochs, verbose=1,
-    callbacks=[cp_callback]
-)
-
-# %%
-fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
-
-for key,val in history.history.items():
-
-    ax.plot(np.arange(epochs) + 1, val, label=key)
-
-ax.legend()
-
-ax.grid(True,linestyle=':',linewidth='1.')
-ax.xaxis.set_ticks_position('both')
-ax.yaxis.set_ticks_position('both')
-ax.tick_params('both',length=3,width=0.5,which='both',direction = 'in',pad=10)
-
-ax.set_xlabel('epoch')
-ax.set_ylabel('loss')
-
-fig.tight_layout()
-#fig.savefig('test.pdf')
-
-# %%
-test_gen = DataGenerator(filename, batch_size=1024*16, steps_per_epoch=1)
+test_gen = DataGenerator(filename, batch_size=2048, steps_per_epoch=1)
 test_loss = keras.losses.mse
 
 
