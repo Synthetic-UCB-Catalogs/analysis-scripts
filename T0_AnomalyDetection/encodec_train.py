@@ -59,7 +59,7 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
-
+from keras import saving
 
 class DataGenerator(keras.utils.Sequence):
     def __init__(self, filename, batch_size, steps_per_epoch, seq_len=5, seed=None, shuffle=True, **kwargs):
@@ -124,17 +124,6 @@ class DataGenerator(keras.utils.Sequence):
         
         sys_indices = self.unique_IDs[index*self.batch_size:(index+1)*self.batch_size]
 
-        # batches = []
-        # for random_id in sys_indices:
-        #     random_sys = (self.df_onehot[self.df_onehot.ID == random_id]).sort_values('time')[self.features]
-        #     len_sys = len(random_sys)
-        #     # random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
-        #     # shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
-            
-        #     random_start = self.rng.integers(len_sys - self.seq_len + 1)
-        #     batches.append(
-        #         random_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
-        #     )
         start_seq = self.rng.integers(0, self.id_counts[sys_indices] - self.seq_len + 1)
         end_seq = start_seq + self.seq_len
         
@@ -150,33 +139,34 @@ class DataGenerator(keras.utils.Sequence):
         if self.shuffle:
             self.rng.shuffle(self.unique_IDs)
 
-
+@saving.register_keras_serializable(name="EncoderDecoder")
 class EncoDecLSTM(keras.Model):
-    def __init__(self, units):
-        super(EncoDecLSTM, self).__init__()
-        self.encoder = layers.LSTM(units, return_state=True)
-        self.lstm_cell = layers.LSTMCell(units)
-        self.dense1 = layers.Dense(units, activation='relu')
+    def __init__(self, units, encoder_config=None, lstm_cell_config=None, dense1_config=None, **kwargs):
+        super(EncoDecLSTM, self).__init__(**kwargs)
+        self.units = units
+        self.encoder = layers.LSTM(units, return_state=True) if encoder_config is None else layers.LSTM.from_config(encoder_config)
+        self.lstm_cell = layers.LSTMCell(units) if lstm_cell_config is None else layers.LSTMCell.from_config(lstm_cell_config)
+        self.dense1 = layers.Dense(units, activation='relu') if dense1_config is None else layers.Dense.from_config(dense1_config)
 
-        #self.FC_hidden = [layers.Dense(size, activation='relu') for size in [2*units, int(units/2), 2, int(units/2), 2*units]]
+    def get_config(self):
+        base_config = super().get_config()
+        # Update the config with the custom layer's parameters
+        config = {
+            "units": self.units,
+            "encoder_config": self.encoder.get_config(),
+            "lstm_cell_config": self.lstm_cell.get_config(),
+            "dense1_config": self.dense1.get_config()
+        }
+        return {**base_config, **config}
 
     def build(self, input_dim):
         
         self.input_shape = input_dim
         self.dense2 = layers.Dense(input_dim[-1], activation=None)
-        #self.decoder = layers.LSTM(input_dim[-1], activation=None, return_sequences=True, return_state=False)
         
     def call(self, input_tensor, training=False):
 
         output, state_h, state_c = self.encoder(input_tensor, training=training)
-
-        # x = tf.concat([state_h, state_c], axis=1)
-        # for el in self.FC_hidden:
-        #     x = el(x)
-
-        # print(x.shape)
-
-        # state_h, state_c = tf.split(x, 2, axis=1)
 
         sequence = []
         for i in range(self.input_shape[1]):
@@ -187,13 +177,12 @@ class EncoDecLSTM(keras.Model):
 
         sequence = tf.transpose(tf.convert_to_tensor(sequence), perm=[1,0,2])
         
-        # return self.decoder(sequence)
         return sequence
-    
     
     def model(self):
         x = layers.Input(shape=(None,1))
         return keras.Model(inputs=[x], outputs=self.call(x))
+
 
 # %%
 units = 64
@@ -219,9 +208,9 @@ if (os.path.exists(LOGS_FOLDER)):
 os.mkdir(LOGS_FOLDER)
 
 cp_callback = keras.callbacks.ModelCheckpoint(
-                filepath=os.path.join(MODELS_FOLDER,'best_model_{epoch:02d}.weights.h5'),
-                save_weights_only=True,
-        save_best_only=True,
+                filepath=os.path.join(MODELS_FOLDER,'best_model_{epoch:02d}.keras'),
+                save_weights_only=False,
+                save_best_only=True,
                 verbose=1
         )
 
@@ -261,7 +250,7 @@ fig.tight_layout()
 #fig.savefig('test.pdf')
 
 # %%
-test_gen = DataGenerator(filename, batch_size=1024*16, steps_per_epoch=1)
+test_gen = DataGenerator(filename, batch_size=2048, steps_per_epoch=1)
 test_loss = keras.losses.mse
 
 

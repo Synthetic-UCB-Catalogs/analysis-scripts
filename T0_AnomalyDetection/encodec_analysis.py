@@ -59,6 +59,7 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
+from keras import saving
 
 
 class DataGenerator(keras.utils.Sequence):
@@ -142,32 +143,34 @@ class DataGenerator(keras.utils.Sequence):
             self.rng.shuffle(self.unique_IDs)
 
 
+@saving.register_keras_serializable(name="EncoderDecoder")
 class EncoDecLSTM(keras.Model):
-    def __init__(self, units):
-        super(EncoDecLSTM, self).__init__()
-        self.encoder = layers.LSTM(units, return_state=True)
-        self.lstm_cell = layers.LSTMCell(units)
-        self.dense1 = layers.Dense(units, activation='relu')
+    def __init__(self, units, encoder_config=None, lstm_cell_config=None, dense1_config=None, **kwargs):
+        super(EncoDecLSTM, self).__init__(**kwargs)
+        self.units = units
+        self.encoder = layers.LSTM(units, return_state=True) if encoder_config is None else layers.LSTM.from_config(encoder_config)
+        self.lstm_cell = layers.LSTMCell(units) if lstm_cell_config is None else layers.LSTMCell.from_config(lstm_cell_config)
+        self.dense1 = layers.Dense(units, activation='relu') if dense1_config is None else layers.Dense.from_config(dense1_config)
 
-        #self.FC_hidden = [layers.Dense(size, activation='relu') for size in [2*units, int(units/2), 2, int(units/2), 2*units]]
+    def get_config(self):
+        base_config = super().get_config()
+        # Update the config with the custom layer's parameters
+        config = {
+            "units": self.units,
+            "encoder_config": self.encoder.get_config(),
+            "lstm_cell_config": self.lstm_cell.get_config(),
+            "dense1_config": self.dense1.get_config()
+        }
+        return {**base_config, **config}
 
     def build(self, input_dim):
         
         self.input_shape = input_dim
         self.dense2 = layers.Dense(input_dim[-1], activation=None)
-        #self.decoder = layers.LSTM(input_dim[-1], activation=None, return_sequences=True, return_state=False)
         
     def call(self, input_tensor, training=False):
 
         output, state_h, state_c = self.encoder(input_tensor, training=training)
-
-        # x = tf.concat([state_h, state_c], axis=1)
-        # for el in self.FC_hidden:
-        #     x = el(x)
-
-        # print(x.shape)
-
-        # state_h, state_c = tf.split(x, 2, axis=1)
 
         sequence = []
         for i in range(self.input_shape[1]):
@@ -178,29 +181,30 @@ class EncoDecLSTM(keras.Model):
 
         sequence = tf.transpose(tf.convert_to_tensor(sequence), perm=[1,0,2])
         
-        # return self.decoder(sequence)
         return sequence
-    
     
     def model(self):
         x = layers.Input(shape=(None,1))
         return keras.Model(inputs=[x], outputs=self.call(x))
 
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+
 # %%
 units = 64
 epochs = 10
-steps_per_epoch = 100
+# steps_per_epoch = 100
 filename = './SEVN/MIST/setA/Z0.02/sevn_mist'
 
 
-model = EncoDecLSTM(units)
-
 MODELS_FOLDER = './chkpoints_units={:02d}_epochs={:02d}'.format(units, epochs)
 
-best_epoch = 8
-file_weights = os.path.join(MODELS_FOLDER, 'best_model_{:02d}.weights.h5'.format(best_epoch))
+best_epoch = 10
+file_model = os.path.join(MODELS_FOLDER, 'best_model_{:02d}.keras'.format(best_epoch))
 
-model.load_weights(file_weights)
+model = keras.models.load_model(file_model)
 
 
 # %%
@@ -209,8 +213,8 @@ test_loss = keras.losses.mse
 
 
 # %%
-test_gen.on_epoch_end()
-X,y = test_gen[0]
+# test_gen.on_epoch_end()
+# X,y = test_gen[0]
 
 raw_errors = model.predict(X) - X
 errors = test_loss(X, model.predict(X))
