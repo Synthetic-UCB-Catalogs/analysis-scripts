@@ -59,21 +59,9 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 import tensorflow as tf
 import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
-from keras import saving
 
-class DataGenerator(keras.utils.Sequence):
-    def __init__(self, filename, batch_size, steps_per_epoch, seq_len=5, seed=None, shuffle=True, **kwargs):
-
-        super().__init__(**kwargs)
-        self.shuffle = shuffle
-        self.steps_per_epoch = steps_per_epoch
-        self.batch_size = batch_size
-        
-        if seed is None:
-            self.rng = np.random.default_rng()
-        else:
-            self.rng = np.random.default_rng(seed=seed)
-        self.seq_len = seq_len
+class DataLoader:
+    def __init__(self, filename):
         
         df = pd.read_csv(filename, skiprows=2, index_col=False)
 
@@ -111,9 +99,26 @@ class DataGenerator(keras.utils.Sequence):
         self.unique_IDs = self.df_onehot.ID.unique()
         self.df_grouped = self.df_onehot.sort_values(by=['time']).groupby('ID')
         self.id_counts = self.df_onehot['ID'].value_counts()
+    
 
-        if self.shuffle:
-            self.rng.shuffle(self.unique_IDs)
+class DataGenerator(keras.utils.Sequence):
+    def __init__(self, dataloader, seq_len, batch_size, steps_per_epoch, seed=None, shuffle=True, **kwargs):
+
+        super().__init__(**kwargs)
+        self.shuffle = shuffle
+        self.steps_per_epoch = steps_per_epoch
+        self.batch_size = batch_size
+        
+        if seed is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = np.random.default_rng(seed=seed)
+        self.seq_len = seq_len
+
+        self.unique_IDs = dataloader.unique_IDs
+        self.id_counts = dataloader.id_counts
+        self.features = dataloader.features
+        self.df_grouped = dataloader.df_grouped
         
 
     def __len__(self):
@@ -139,62 +144,53 @@ class DataGenerator(keras.utils.Sequence):
         if self.shuffle:
             self.rng.shuffle(self.unique_IDs)
 
-@saving.register_keras_serializable(name="EncoderDecoder")
 class EncoDecLSTM(keras.Model):
-    def __init__(self, units, encoder_config=None, lstm_cell_config=None, dense1_config=None, **kwargs):
+    def __init__(self, units, features, **kwargs):
         super(EncoDecLSTM, self).__init__(**kwargs)
         self.units = units
-        self.encoder = layers.LSTM(units, return_state=True) if encoder_config is None else layers.LSTM.from_config(encoder_config)
-        self.lstm_cell = layers.LSTMCell(units) if lstm_cell_config is None else layers.LSTMCell.from_config(lstm_cell_config)
-        self.dense1 = layers.Dense(units, activation='relu') if dense1_config is None else layers.Dense.from_config(dense1_config)
-
-    def get_config(self):
-        base_config = super().get_config()
-        # Update the config with the custom layer's parameters
-        config = {
-            "units": self.units,
-            "encoder_config": self.encoder.get_config(),
-            "lstm_cell_config": self.lstm_cell.get_config(),
-            "dense1_config": self.dense1.get_config()
-        }
-        return {**base_config, **config}
-
-    def build(self, input_dim):
+        self.features = features
+        self.encoder = layers.LSTM(self.units, return_state=True, name='encoder') 
+        self.lstm_cell = layers.LSTMCell(self.units, name='decoder_cell')
+        self.dense1 = layers.Dense(self.units, activation='relu', name='projector1')
+        self.dense2 = layers.Dense(self.features, activation=None, name='projector2')
         
-        self.input_shape = input_dim
-        self.dense2 = layers.Dense(input_dim[-1], activation=None)
+    def build(self, input_dim):
+
+        self.input_dim = input_dim
         
     def call(self, input_tensor, training=False):
 
         output, state_h, state_c = self.encoder(input_tensor, training=training)
 
         sequence = []
-        for i in range(self.input_shape[1]):
+        for i in range(self.input_dim[1]):
             output,(state_h,state_c) = self.lstm_cell(output, [state_h, state_c], training=training)
-            # output = self.dense1(output)
-            # output = self.dense2(output)
-            sequence.append(self.dense2(self.dense1(output)))
+            sequence.append(output)
 
         sequence = tf.transpose(tf.convert_to_tensor(sequence), perm=[1,0,2])
         
-        return sequence
-    
-    def model(self):
-        x = layers.Input(shape=(None,1))
-        return keras.Model(inputs=[x], outputs=self.call(x))
+        return self.dense2(self.dense1(sequence))
+
 
 
 # %%
-units = 64
-epochs = 10
-steps_per_epoch = 100
 filename = './SEVN/MIST/setA/Z0.02/sevn_mist'
 
+dataloader = DataLoader(filename)
 
-train_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=steps_per_epoch)
-val_gen = DataGenerator(filename, batch_size=64, steps_per_epoch=1)
+# %%
+seq_len = 5
+num_features = len(dataloader.features)
 
-model = EncoDecLSTM(units)
+units = 128
+epochs = 20
+steps_per_epoch = 100
+
+
+train_gen = DataGenerator(dataloader, seq_len, batch_size=64, steps_per_epoch=steps_per_epoch)
+val_gen = DataGenerator(dataloader, seq_len, batch_size=64, steps_per_epoch=1)
+
+model = EncoDecLSTM(units, num_features)
 
 MODELS_FOLDER = './chkpoints_units={:02d}_epochs={:02d}'.format(units, epochs)
 LOGS_FOLDER = './logs'
@@ -208,12 +204,11 @@ if (os.path.exists(LOGS_FOLDER)):
 os.mkdir(LOGS_FOLDER)
 
 cp_callback = keras.callbacks.ModelCheckpoint(
-                filepath=os.path.join(MODELS_FOLDER,'best_model_{epoch:02d}.keras'),
-                save_weights_only=False,
+                filepath=os.path.join(MODELS_FOLDER,'best_model.weights.h5'),
+                save_weights_only=True,
                 save_best_only=True,
                 verbose=1
         )
-
 
 
 # %%
@@ -230,6 +225,11 @@ history = model.fit(
 )
 
 # %%
+for layer in model.layers:
+    print(f"Layer: {layer.name}")
+    for var in layer.get_weights():
+        print(f"\tWeights shape: {var.shape}")
+
 fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(6,4))
 
 for key,val in history.history.items():
@@ -250,16 +250,30 @@ fig.tight_layout()
 #fig.savefig('test.pdf')
 
 # %%
-test_gen = DataGenerator(filename, batch_size=2048, steps_per_epoch=1)
+weights_file = os.path.join(MODELS_FOLDER,'best_model.weights.h5')
+
+test_gen = DataGenerator(dataloader, seq_len, batch_size=2048, steps_per_epoch=1)
 test_loss = keras.losses.mse
+
+test_gen.on_epoch_end()
+X,_ = test_gen[0]
+
+model_reconstructed = EncoDecLSTM(units,num_features)
+#_ = model_reconstructed(layers.Input(shape=(seq_len,num_features)))
+_ = model_reconstructed(X)
+model_reconstructed.load_weights(weights_file)
+
+for layer in model_reconstructed.layers:
+    print(f"Layer: {layer.name}")
+    for var in layer.get_weights():
+        print(f"\tWeights shape: {var.shape}")
+
 
 
 # %%
-test_gen.on_epoch_end()
-X,y = test_gen[0]
 
-raw_errors = model.predict(X) - X
-errors = test_loss(X, model.predict(X))
+raw_errors = model_reconstructed.predict(X) - X
+errors = test_loss(X, model_reconstructed.predict(X))
 batch_errors = np.array(
     tf.math.reduce_mean(errors, axis=-1)
 )
