@@ -53,8 +53,10 @@ def first_interaction_channels(d):
 
     Returns
     -------
-    
+    first_RLO : `Dictionary`
+        contains a list of IDs for different interaction channels
     '''
+    
     RLO = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])]
     nonRLO = d.loc[~d.ID.isin(RLO.ID.unique())].ID.unique()
     merger = RLO.loc[(RLO.event == 52) & (RLO.event.shift() == 511) & (RLO.event.shift(2) == 31)].ID

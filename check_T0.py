@@ -34,9 +34,7 @@
 
 import rapid_code_load_T0 as load
 
-# + [markdown] jp-MarkdownHeadingCollapsed=true
 # #### First we check BSE
-# -
 
 BSE_T0 = load.convert_BSE_data_to_T0(
     ifilepath="data/pilot_runs_raw_data/BSE/fiducial/BinaryRun.dat", 
@@ -159,7 +157,7 @@ METISSE_T0_intermediate = load.convert_COSMIC_data_to_T0(
     outputpath="data/T0_format_pilot/METISSE-COSMIC/intermediate/", 
     hdf5_filename="METISSE_T0.hdf5")
 
-METISSE_T0_intermediate_RLO = METISSE_T0_intermediate.loc[METISSE_T0_intermediate.event.isin([31, 32, 511, 512, 513, 52, 53])]
+METISSE_T0_intermediate_RLO = METISSE_T0_intermediate.loc[METISSE_T0_intermediate.event.isin([511, 512, 513, 52, 53])]
 for id in METISSE_T0_intermediate_RLO.ID.unique()[:10]:
     print(METISSE_T0_intermediate.loc[METISSE_T0_intermediate.ID == id][['ID', 'time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor']])
     print()
@@ -174,10 +172,15 @@ SeBa_T0_basic = load.convert_SeBa_data_to_T0(
     outputpath="data/T0_format_pilot/SeBa/basic", 
     hdf5_filename="SeBa_T0.hdf5")
 
-SeBa_T0_basic_RLO = SeBa_T0_basic.loc[SeBa_T0_basic.event.isin([31, 32, 511, 512, 513, 52, 53])]
-for id in SeBa_T0_basic_RLO.ID.unique()[:10]:
-    print(SeBa_T0_basic.loc[SeBa_T0_basic.ID == id][['ID', 'time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor']])
-    print()
+SeBa_T0_basic_RLO = SeBa_T0_basic.loc[SeBa_T0_basic.event.isin([511])]
+for id in SeBa_T0_basic_RLO.ID.unique()[200:210]:
+    print(SeBa_T0_basic.loc[SeBa_T0_basic.ID == id][['ID', 'time', 'event', 'type1', 'type2', 'mass1', 'mass2', 'semiMajor', 'RRLO_1']])
+#print(SeBa_T0_basic.loc[SeBa_T0_basic.ID == 3315])
+#s = s.loc[~((s.event == 31) & (s.event.shift() == 31))]
+#print(SeBa_T0_basic.loc[~((SeBa_T0_basic.event == 31) & (SeBa_T0_basic.event.shift() == 31)) & (SeBa_T0_basic.type1 == SeBa_T0_basic.type1.shift())])
+
+s
+SeBa_T0_basic.loc[SeBa_T0_basic.ID == 77131]
 
 # ##### Ok! so for this one, we need a lot of work on the event = 32 situation. 
 
