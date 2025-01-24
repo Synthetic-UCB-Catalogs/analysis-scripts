@@ -115,7 +115,7 @@ def load_IC(ifilepath):
 #######################################################################
 
 def convert_ComBinE_csv_to_h5(ifilepath, outputpath=None, hdf5_filename="ComBinE_T0.hdf5"):
-    """Read in COSMIC data and convert to L0
+    """Read in ComBinE data and convert to L0
     
     Parameters
     ----------
@@ -125,7 +125,7 @@ def convert_ComBinE_csv_to_h5(ifilepath, outputpath=None, hdf5_filename="ComBinE
     Returns
     -------
     dat : `pandas.DataFrame`
-        all data in T0 format
+        all data in L0 format
         
     header : `pandas.DataFrame`
         header for dat
@@ -182,7 +182,7 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     Returns
     -------
     dat : `pandas.DataFrame`
-        all data in T0 format
+        all data in L0 format
         
     header : `pandas.DataFrame`
         header for dat
@@ -484,7 +484,7 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
                "mass1","radius1","Teff1","massHeCore1",
                "type2","mass2","radius2","Teff2","massHeCore2"]]
 
-    header_info = {"cofVer" : 1.0,
+    header = {"cofVer" : 1.0,
                    "cofLevel": "L0",
                    "cofExtension": "None",
                    "bpsName": "SeBa",
@@ -494,7 +494,6 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
                    "NLINES": len(dat),
                    "Z": metallicity}
 
-    header = pd.DataFrame.from_dict([header_info])
 
     # Save in hdf5 format
     if outputpath is None:
