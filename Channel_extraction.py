@@ -32,6 +32,8 @@ METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/b
 COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
 SeBa_T0 = convert_SeBa_data_to_T0('data/pilot_runs_raw_data/SeBa/SeBa-simple.data', metallicity=0.02)
 
+SeBa_T0.loc[SeBa_T0.ID == 274778][['ID', 'time', 'event', 'mass1', 'type1', 'mass2', 'type2', 'semiMajor']]
+
 
 def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
@@ -111,6 +113,10 @@ first_RLO_COMPAS_09 = get_first_RLO_figure(COMPAS_T0, q=0.88, savefig='COMPAS_fi
 first_RLO_SeBa_01 = get_first_RLO_figure(SeBa_T0, q=0.08, savefig='SeBa_first_RLO_channels_qinit_01.png')
 first_RLO_SeBa_05 = get_first_RLO_figure(SeBa_T0, q=0.49, savefig='SeBa_first_RLO_channels_qinit_05.png')
 first_RLO_SeBa_09 = get_first_RLO_figure(SeBa_T0, q=0.88, savefig='SeBa_first_RLO_channels_qinit_09.png')
+
+first_RLO_SeBa_01
+
+
 
 
 
