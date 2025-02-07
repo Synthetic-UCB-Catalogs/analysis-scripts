@@ -18,6 +18,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import tensorflow as tf
+import tensorflow.keras as keras
+import tensorflow.keras.layers as layers
+
 import os
 import shutil
 
@@ -56,165 +60,41 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 #fig.savefig('test.pdf')
 
 # %%
-import tensorflow as tf
-import tensorflow.keras as keras
-import tensorflow.keras.layers as layers
-from keras import saving
+from models import *
+from config import Params
 
+dataloader = DataLoader(Params.FILENAME)
 
-class DataGenerator(keras.utils.Sequence):
-    def __init__(self, filename, batch_size, steps_per_epoch, seq_len=5, seed=None, shuffle=True, **kwargs):
-
-        super().__init__(**kwargs)
-        self.shuffle = shuffle
-        self.steps_per_epoch = steps_per_epoch
-        self.batch_size = batch_size
-        
-        if seed is None:
-            self.rng = np.random.default_rng()
-        else:
-            self.rng = np.random.default_rng(seed=seed)
-        self.seq_len = seq_len
-        
-        df = pd.read_csv(filename, skiprows=2, index_col=False)
-
-        # reduce the ranges of "time" and "Teff1"/"Teff2": convert to Gyr and kiloK, respectively;
-        conversion_facs = {
-            'time': 1000.,
-        }
-        for col,fac in conversion_facs.items():
-            df[col] /= fac
-        
-        
-        # (-1) is NaN and (-2) is missing which should be encoded as empty strings ''
-        df.replace('^\s*$', -2., inplace=True, regex=True)
-        df.fillna(-1., inplace=True)
-
-        # 1. one-hot encoding for the categorical variables [event,type1,type2]
-        # 2. convert time to Gyr
-        columns = ['event', 'type1', 'type2']
-        for col in columns:
-            df[col] = df[col].astype(str)
-        
-        self.df_onehot = pd.get_dummies(df, columns=columns, dtype=float)
-
-        log_columns = ['mass1', 'mass2', 'radius1', 'radius2', 'semiMajor', 'Teff1', 'Teff2', 'massHecore1', 'massHecore2']
-        log_columns_Re = [f'log_{col}_Re' for col in log_columns]
-        log_columns_Im = [f'log_{col}_Im' for col in log_columns]
-        eps = 1e-16
-        for col,im_col in zip(log_columns,log_columns_Im):
-            complex_log = np.log10(eps + self.df_onehot[col] + 0*1j)
-            self.df_onehot[im_col] = np.imag(complex_log)
-            self.df_onehot[col] = np.real(complex_log)
-        self.df_onehot.rename(columns=dict(zip(log_columns,log_columns_Re)), inplace=True)
-        
-        self.features = self.df_onehot.columns.values[2:]
-        self.unique_IDs = self.df_onehot.ID.unique()
-
-        if self.shuffle:
-            self.rng.shuffle(self.unique_IDs)
-        
-
-    def __len__(self):
-        return self.steps_per_epoch
-        
-
-    def __getitem__(self, index):
-        
-        sys_indices = self.unique_IDs[index*self.batch_size:(index+1)*self.batch_size]
-
-        batches = []
-        for random_id in sys_indices:
-            random_sys = (self.df_onehot[self.df_onehot.ID == random_id]).sort_values('time')[self.features]
-            len_sys = len(random_sys)
-            # random_shift = -(self.seq_len-1) + self.rng.integers(2*self.seq_len-1)
-            # shifted_sys = random_sys.shift(random_shift, fill_value=-2.)
-            
-            random_start = self.rng.integers(len_sys - self.seq_len + 1)
-            batches.append(
-                random_sys.iloc[random_start:(random_start+self.seq_len)].to_numpy(dtype=np.float32),
-            )
-            
-        
-        return tf.convert_to_tensor(batches),tf.convert_to_tensor(batches)
-
-    def on_epoch_end(self):
-        if self.shuffle:
-            self.rng.shuffle(self.unique_IDs)
-
-
-@saving.register_keras_serializable(name="EncoderDecoder")
-class EncoDecLSTM(keras.Model):
-    def __init__(self, units, encoder_config=None, lstm_cell_config=None, dense1_config=None, **kwargs):
-        super(EncoDecLSTM, self).__init__(**kwargs)
-        self.units = units
-        self.encoder = layers.LSTM(units, return_state=True) if encoder_config is None else layers.LSTM.from_config(encoder_config)
-        self.lstm_cell = layers.LSTMCell(units) if lstm_cell_config is None else layers.LSTMCell.from_config(lstm_cell_config)
-        self.dense1 = layers.Dense(units, activation='relu') if dense1_config is None else layers.Dense.from_config(dense1_config)
-
-    def get_config(self):
-        base_config = super().get_config()
-        # Update the config with the custom layer's parameters
-        config = {
-            "units": self.units,
-            "encoder_config": self.encoder.get_config(),
-            "lstm_cell_config": self.lstm_cell.get_config(),
-            "dense1_config": self.dense1.get_config()
-        }
-        return {**base_config, **config}
-
-    def build(self, input_dim):
-        
-        self.input_shape = input_dim
-        self.dense2 = layers.Dense(input_dim[-1], activation=None)
-        
-    def call(self, input_tensor, training=False):
-
-        output, state_h, state_c = self.encoder(input_tensor, training=training)
-
-        sequence = []
-        for i in range(self.input_shape[1]):
-            output,(state_h,state_c) = self.lstm_cell(output, [state_h, state_c], training=training)
-            # output = self.dense1(output)
-            # output = self.dense2(output)
-            sequence.append(self.dense2(self.dense1(output)))
-
-        sequence = tf.transpose(tf.convert_to_tensor(sequence), perm=[1,0,2])
-        
-        return sequence
-    
-    def model(self):
-        x = layers.Input(shape=(None,1))
-        return keras.Model(inputs=[x], outputs=self.call(x))
-
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
+num_features = len(dataloader.features)
+seq_len = Params.SEQ_LEN
+units = Params.UNITS
 
 
 # %%
-units = 64
-epochs = 10
-# steps_per_epoch = 100
-filename = './SEVN/MIST/setA/Z0.02/sevn_mist'
+weights_file = os.path.join(Params.MODELS_FOLDER,'best_model.weights.h5')
 
+init_gen = DataGenerator(dataloader, seq_len, batch_size=2, steps_per_epoch=1)
 
-MODELS_FOLDER = './chkpoints_units={:02d}_epochs={:02d}'.format(units, epochs)
+#test_gen.on_epoch_end()
+X,_ = init_gen[0]
 
-best_epoch = 10
-file_model = os.path.join(MODELS_FOLDER, 'best_model_{:02d}.keras'.format(best_epoch))
+model = EncoDecLSTM(units,num_features)
+_ = model(X)
+model.load_weights(weights_file)
 
-model = keras.models.load_model(file_model)
+for layer in model.layers:
+    print(f"Layer: {layer.name}")
+    for var in layer.get_weights():
+        print(f"\tWeights shape: {var.shape}")
 
 
 # %%
-test_gen = DataGenerator(filename, batch_size=2048, steps_per_epoch=1)
+batch_size = 2048
+
+test_gen = DataGenerator(dataloader, seq_len, batch_size=batch_size, steps_per_epoch=1)
 test_loss = keras.losses.mse
 
-
-# %%
-# test_gen.on_epoch_end()
-# X,y = test_gen[0]
+X,_ = test_gen[0]
 
 raw_errors = model.predict(X) - X
 errors = test_loss(X, model.predict(X))
@@ -231,7 +111,7 @@ ax.set_yscale('log')
 
 bins = np.logspace(np.log10(batch_errors.min()), np.log10(batch_errors.max()), 100)
 #bins=100
-ax.hist(batch_errors, bins=bins, density=True)
+ax.hist(batch_errors, bins=bins)
 
 ax.grid(True,linestyle=':',linewidth='1.')
 ax.xaxis.set_ticks_position('both')
@@ -258,5 +138,15 @@ fig = corner.corner(
     errors_per_feature[:,:5],
     range=ranges
 )
+
+# %%
+anomaly_ids = test_gen.unique_IDs[:batch_size][batch_errors>1]
+
+anomalies = [test_gen.df_orig.get_group(group) for group in anomaly_ids]
+
+len(anomalies)
+
+# %%
+anomalies[0]
 
 # %%
