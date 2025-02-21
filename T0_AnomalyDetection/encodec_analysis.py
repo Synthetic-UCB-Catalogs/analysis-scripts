@@ -31,8 +31,8 @@ BIGGER_SIZE = 18
 plt.rcdefaults()
 
 #rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-#plt.rc('font',**{'family':'serif','serif':['Times']})
-#plt.rc('text', usetex=True)
+plt.rc('font',**{'family':'serif','serif':['Times']})
+plt.rc('text', usetex=True)
 
 
 plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
@@ -147,6 +147,94 @@ anomalies = [test_gen.df_orig.get_group(group) for group in anomaly_ids]
 len(anomalies)
 
 # %%
-anomalies[0]
+aux = anomalies[0]
+
+cols_to_include = ['time', 'mass1', 'radius1', 'Teff1', 'type1']
+
+evol_sequence = pd.DataFrame()
+
+for col in cols_to_include:
+    cond = (aux[cols_to_include[:-1]]>=0).all(axis=1)
+    evol_sequence[col] = aux[cond][col]
+
+
+Tsun = 5780.  # Teff for the Sun
+MVsun = 4.83    # absolute mag for the Sun (V-band)
+
+evol_sequence['lum1'] = evol_sequence['radius1']**2 * (evol_sequence['Teff1']/Tsun)**4
+evol_sequence['MV'] = MVsun - 2.5*np.log10(evol_sequence['lum1'])
+
+cols_for_plot = ['time', 'lum1', 'MV', 'Teff1', 'type1']
+
+plot_data = sorted(
+    zip(*[evol_sequence[col] for col in cols_for_plot]),
+    key=lambda x:x[0]
+)
+
+evol_sequence
+
+# %%
+
+_,lum,MV,Teff,_ = [el for el in zip(*plot_data)]
+classes = dict(
+    zip(
+        list('OBAFGKM'),
+        [30000., 9700., 7200., 5700., 4900., 3400., 2100.]
+    )
+)
+
+fig,ax = plt.subplots(ncols=1, nrows=1, figsize=(5,4))
+
+ax.grid(True,linestyle=':',linewidth='1.')
+ax.xaxis.set_ticks_position('both')
+ax.yaxis.set_ticks_position('both')
+ax.tick_params('both',length=3,width=0.5,which='both',direction = 'in',pad=10)
+
+ax.invert_xaxis()
+ax.invert_yaxis()
+
+ax_twinx = ax.twinx()
+ax_twiny = ax.twiny()
+ax_twinx.set_yscale('log')
+ax_twiny.set_xscale('log')
+ax.set_xscale('log')
+
+
+ax_twiny.scatter(Teff, MV)
+ax_twinx.scatter(Teff, lum)
+
+for i, txt in enumerate(range(len(Teff))):
+    ax.annotate(txt, (Teff[i], MV[i]))
+
+ymin,ymax = -10,15
+
+ax_twiny.set_xlim(3e+5, 3e+3)
+ax.set_xlim(3e+5, 3e+3)
+ax.set_ylim(ymax, ymin)
+ax_twinx.set_ylim(
+    10**((MVsun-ymax)/2.5), 10**((MVsun-ymin)/2.5)
+)
+
+ax.set_xticks(list(classes.values()))
+ax.set_xticklabels(list(classes.keys()))
+
+ax_twiny.set_xlabel('effective temperature (K)')
+ax.set_ylabel('$M_V$')
+ax_twinx.set_ylabel('luminosity $(L_\\odot)$')
+
+# %%
+class_temps = np.array(list(classes.values()))
+
+class_temps[1:]/class_temps[:-1]
+
+# %%
+class_temps
+
+# %%
+class_temps = np.array(
+    [25000, 10000, 7500, 6000, 5000, 3500]
+)
+
+class_temps[1:]/class_temps[:-1]
 
 # %%
