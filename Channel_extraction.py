@@ -13,6 +13,8 @@
 #     name: python3
 # ---
 
+# %matplotlib inline
+
 # + id="453IjyqHHSa3" executionInfo={"status": "ok", "timestamp": 1716398576819, "user_tz": 240, "elapsed": 1020, "user": {"displayName": "Katelyn Breivik", "userId": "00438142393458917517"}}
 import numpy as np
 import pandas as pd
@@ -25,7 +27,6 @@ import cmasher as cmr
 from collections import Counter
 
 import formation_channels as fc
-from rapid_code_load_T0 import convert_BSE_data_to_T0, convert_COMPAS_data_to_T0, convert_COSMIC_data_to_T0, convert_SeBa_data_to_T0, load_T0_data
 
 
 # -
@@ -296,3 +297,10 @@ first_RLO_COMPAS_09 = get_first_RLO_figure(COMPAS_T0, q=0.88, savefig='COMPAS_fi
 #plt.ylabel('M$_1$ [Msun]')
 #plt.show()
 #plt.savefig('cosmic_q_i_09.png', facecolor='white', dpi=150)
+# -
+
+
+
+
+
+

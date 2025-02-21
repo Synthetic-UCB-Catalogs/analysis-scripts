@@ -4,8 +4,8 @@ import numpy as np
 import h5py as h5
 
 #######################################################################
-### Functions to load T0.hdf5 data
-#######################################################################
+# ## Functions to load T0.hdf5 data
+# ######################################################################
 
 def load_T0_data(ifilepath, code=None, **kwargs):
     """Read in standardized output Common Core data and select at DWD formation
@@ -111,8 +111,8 @@ def load_IC(ifilepath):
 
 
 #######################################################################
-### Functions to convert from original code outputs into T0.hdf5 format
-#######################################################################
+# ## Functions to convert from original code outputs into T0.hdf5 format
+# ######################################################################
 
 def convert_ComBinE_csv_to_h5(ifilepath, outputpath=None, hdf5_filename="ComBinE_T0.hdf5"):
     """Read in COSMIC data and convert to L0
