@@ -1,0 +1,5 @@
+https://github.com/TomWagg/detecting-DCOs-in-LISA/tree/main/simulation/postprocessing_notebooks
+
+https://github.com/TomWagg/detecting-DCOs-in-LISA/blob/main/simulation/postprocessing_notebooks/mw_mass_calculation.ipynb
+
+https://github.com/Synthetic-UCB-Catalogs/Galaxy-scripts
