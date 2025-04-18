@@ -25,13 +25,14 @@ import h5py as h5
 import tarfile
 import cmasher as cmr
 from collections import Counter
+import rapid_code_load_T0 as load
 
 import formation_channels as fc
 # -
-COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
-METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
-COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
-SeBa_T0 = convert_SeBa_data_to_T0('data/pilot_runs_raw_data/SeBa/SeBa-simple.data', metallicity=0.02)
+#COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
+#METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
+#COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
+SeBa_T0, SeBa_header = load.load_T0_data('data/T0_format_pilot/SeBa/basic/SeBa_T0.hdf5')
 
 SeBa_T0.loc[SeBa_T0.ID == 274778][['ID', 'time', 'event', 'mass1', 'type1', 'mass2', 'type2', 'semiMajor']]
 
@@ -98,6 +99,14 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
     plt.show()
 
     return first_RLO
+
+first_RLO_SeBa_05 = get_first_RLO_figure(SeBa_T0, q=0.08, savefig='SeBa_first_RLO_channels_qinit_05.png')
+
+
+for ID in first_RLO_SeBa_05['SMT_1'][::5]:
+    s_print = SeBa_T0.loc[(SeBa_T0.ID==ID) & (SeBa_T0.semiMajor > 100)]
+    if not s_print.empty:
+        print(SeBa_T0.loc[SeBa_T0.ID.isin(s_print.ID.values)][['time', 'event', 'semiMajor', 'type1', 'type2', 'mass1', 'mass2']])
 
 first_RLO_COSMIC_01 = get_first_RLO_figure(COSMIC_T0, q=0.08, savefig='COSMIC_first_RLO_channels_qinit_01.png')
 first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
@@ -214,7 +223,6 @@ COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.h
 
 first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0_basic, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
 first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0_basic, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
->>>>>>> origin/main
 
 first_RLO_METISSE_01 = get_first_RLO_figure(METISSE_T0, q=0.08, savefig='METISSE_first_RLO_channels_qinit_01.png')
 first_RLO_METISSE_05 = get_first_RLO_figure(METISSE_T0, q=0.49, savefig='METISSE_first_RLO_channels_qinit_05.png')
