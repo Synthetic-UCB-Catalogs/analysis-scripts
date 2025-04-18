@@ -228,9 +228,6 @@ class_temps = np.array(list(classes.values()))
 class_temps[1:]/class_temps[:-1]
 
 # %%
-class_temps
-
-# %%
 class_temps = np.array(
     [25000, 10000, 7500, 6000, 5000, 3500]
 )
