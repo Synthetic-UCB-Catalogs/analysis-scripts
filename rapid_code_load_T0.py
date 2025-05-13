@@ -649,7 +649,9 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat["massHeCore2"] = np.zeros(len(dat))*np.nan
     
     # set up the events
+    
     # first cut out the symbiotic and blue stragglers
+    # for this project
     dat["event"] = np.zeros(len(dat))
     disruption_IDs = dat.loc[dat.evol_type == 11].ID
     dat = dat.loc[~dat.evol_type.isin([11,12,13,14])]
@@ -659,17 +661,23 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() > dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() > dat.kstar_2), "event"] = 12
-    dat.loc[(dat.evol_type == 2) & (dat.kstar_2 < 10), "event"] = 12
+    #dat.loc[(dat.evol_type == 2) & (dat.kstar_2 < 10), "event"] = 12
     dat.loc[(dat.evol_type == 3), "event"] = 3
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7)] = 31
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 < dat.kstar_2) & (dat.kstar_1 >= 7)] = 32
+    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 31
+    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == 1) & (dat.kstar_2 == 1) & (dat.mass1 > dat.mass2), "event"] = 31
+
+    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 < dat.kstar_2) & (dat.kstar_1 >= 7), "event"] = 32
 
     dat.loc[(dat.evol_type == 4), "event"] = 4
     #maybe select 41 vs 42 based on kstar type?
+    
+    dat.loc[(dat.evol_type == 5), "event"] = 53
+    dat.loc[(dat.evol_type == 6), "event"] = 52
 
-    dat.loc[(dat.evol_type == 5), "event"] = 5
-    dat.loc[(dat.evol_type == 6), "event"] = 6
-    dat.loc[(dat.evol_type == 7), "event"] = 3
+
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 511
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 < dat.kstar_2) & (dat.kstar_1 >= 7), "event"] = 512
+
     dat.loc[(dat.evol_type == 8), "event"] = 4
     dat.loc[(dat.evol_type == 9) & (dat.kstar_1 == 15), "event"] = 211
     dat.loc[(dat.evol_type == 9) & (dat.kstar_2 == 15), "event"] = 221
