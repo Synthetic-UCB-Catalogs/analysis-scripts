@@ -100,10 +100,12 @@ class EncoDecLSTM(keras.Model):
         super(EncoDecLSTM, self).__init__(**kwargs)
         self.units = units
         self.features = features
+
         self.encoder = layers.LSTM(self.units, return_state=True, name='encoder') 
         self.lstm_cell = layers.LSTMCell(self.units, name='decoder_cell')
         self.dense1 = layers.Dense(self.units, activation='relu', name='projector1')
         self.dense2 = layers.Dense(self.features, activation=None, name='projector2')
+
         
     def build(self, input_dim):
 
@@ -112,6 +114,41 @@ class EncoDecLSTM(keras.Model):
     def call(self, input_tensor, training=False):
 
         output, state_h, state_c = self.encoder(input_tensor, training=training)
+
+        sequence = []
+        for i in range(self.input_dim[1]):
+            output,(state_h,state_c) = self.lstm_cell(output, [state_h, state_c], training=training)
+            sequence.append(output)
+
+        sequence = tf.transpose(tf.convert_to_tensor(sequence), perm=[1,0,2])
+        
+        return self.dense2(self.dense1(sequence))
+
+
+class EncoDecBottleNeck(keras.Model):
+    def __init__(self, units, features, low_dim_list, **kwargs):
+        super(EncoDecLSTM, self).__init__(**kwargs)
+        self.units = units
+        self.features = features
+        self.low_dim_list = low_dim_list
+
+        self.encoder = layers.LSTM(self.units, return_state=True, name='encoder') 
+        self.lstm_cell = layers.LSTMCell(self.units, name='decoder_cell')
+        self.dense1 = layers.Dense(self.units, activation='relu', name='projector1')
+        self.dense2 = layers.Dense(self.features, activation=None, name='projector2')
+
+        self.low_dim_block = [layers.Dense(hidden_units, activation='relu') for hidden_units in self.low_dim_list]
+        self.low_dim_block.append(layers.Dense(self.units, activation='relu'))
+        
+    def build(self, input_dim):
+
+        self.input_dim = input_dim
+        
+    def call(self, input_tensor, training=False):
+
+        output, state_h, state_c = self.encoder(input_tensor, training=training)
+        for _layer in self.low_dim_block:
+            output = _layer(output)
 
         sequence = []
         for i in range(self.input_dim[1]):

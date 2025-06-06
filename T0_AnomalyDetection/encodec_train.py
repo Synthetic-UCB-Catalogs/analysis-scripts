@@ -75,7 +75,6 @@ train_gen = DataGenerator(dataloader, seq_len, batch_size=64, steps_per_epoch=st
 val_gen = DataGenerator(dataloader, seq_len, batch_size=64, steps_per_epoch=1)
 
 # %%
-
 model = EncoDecLSTM(units, num_features)
 
 if (os.path.exists(Params.MODELS_FOLDER)):
@@ -83,7 +82,7 @@ if (os.path.exists(Params.MODELS_FOLDER)):
 os.makedirs(Params.MODELS_FOLDER, exist_ok=True)
 
 cp_callback = keras.callbacks.ModelCheckpoint(
-                filepath=os.path.join(Params.MODELS_FOLDER,'best_model.weights.h5'),
+                filepath=os.path.join(Params.MODELS_FOLDER,'baseline_best_model.weights.h5'),
                 save_weights_only=True,
                 save_best_only=True,
                 verbose=1
@@ -91,8 +90,17 @@ cp_callback = keras.callbacks.ModelCheckpoint(
 
 
 # %%
+from keras.optimizers.schedules import ExponentialDecay
+
+lr_schedule = ExponentialDecay(
+    initial_learning_rate=0.01,
+    decay_steps=500,
+    decay_rate=1/1.5,
+    staircase=True
+)
+
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.001), 
+    optimizer=keras.optimizers.Adam(learning_rate=lr_schedule), 
     loss=keras.losses.MeanSquaredError(),
 )
 
