@@ -18,7 +18,7 @@ def load_T0_data(ifilepath, code=None, **kwargs):
         ifilepath to T0 datafile 
 
     code : 
-        name of code (only required for non-standard codes, ComBinE and SEVN)
+        name of code (only required for non-rapid codes, ComBinE and SEVN)
 
     **kwargs
         metallicty : `float`

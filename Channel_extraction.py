@@ -36,6 +36,7 @@ BSE_T0, BSE_header = load_T0_data('data/T0_format_pilot/BSE/fiducial/BSE_T0.hdf5
 #COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
 #SeBa_T0, SeBa_header = load_T0_data('data/IC_variations/qmin_01/SeBa_T0.hdf5')
 
+
 def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
 
@@ -128,7 +129,6 @@ for id in ceid[:10]:
     print(BSE_05_SMT1.loc[BSE_05_SMT1.ID == id][['time', 'type1', 'type2', 'event', 'mass1', 'mass2', 'semiMajor']])
     print()
     print()
-
 # ### First let's load the different pilot runs for COSMIC
 
 COSMIC_T0_basic, COSMIC_header_basic = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
