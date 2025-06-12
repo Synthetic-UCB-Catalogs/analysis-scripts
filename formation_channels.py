@@ -56,28 +56,97 @@ def first_interaction_channels(d):
     first_RLO : `Dictionary`
         contains a list of IDs for different interaction channels
     '''
-    
-    RLO = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])]
-    nonRLO = d.loc[~d.ID.isin(RLO.ID.unique())].ID.unique()
-    merger = RLO.loc[(RLO.event == 52) & (RLO.event.shift() == 511) & (RLO.event.shift(2) == 31)].ID
-    RLO = RLO.loc[~RLO.ID.isin(merger)]
-    CE_1 = RLO.loc[(RLO.event == 511) & (RLO.event.shift() == 31)].ID
-    RLO = RLO.loc[~RLO.ID.isin(CE_1)]
-    SMT_1 = RLO.loc[RLO.event == 31].ID
-    RLO = RLO.loc[~RLO.ID.isin(SMT_1)]
-    CE_2 = RLO.loc[(RLO.event == 512) & (RLO.event.shift() == 32)].ID
-    RLO = RLO.loc[~RLO.ID.isin(CE_2)]
-    SMT_2 = RLO.loc[RLO.event == 32].ID
-    RLO = RLO.loc[~RLO.ID.isin(SMT_2)]
-    DCCE = RLO.loc[(RLO.event == 512)].ID
 
+    # calculate the time that the star goes back into its Roche lobe the first time
+    t_rlo_end_1 = d.loc[d.event.isin([4, 41])].groupby('ID', as_index=False).time.first()
+    t_rlo_end_1.columns = ['ID', 't_rlo_end_1']
+    
+    d = d.merge(t_rlo_end_1, on='ID', how='left')
+    d['t_rlo_end_1'] = d['t_rlo_end_1'].fillna(13700.0)
+
+    
+    # filter out everything that happens after first RLO finishes (don't cut on no RLO or mergers)
+    d = d.loc[~(d.time > d.t_rlo_end_1)]
+    #import pdb; pdb.set_trace()
+    # first look for RLO and non-RLO
+    RLO_IDs = d.loc[d.event.isin([31, 32, 511, 512, 513, 52, 53])].ID.unique()
+    RLO = d.loc[d.ID.isin(RLO_IDs)]
+    nonRLO = d.loc[~d.ID.isin(RLO.ID.unique())].ID.unique()
+    
+    # Select out things that merge by finding mergers 
+    RLO_merger_IDs = RLO.loc[(RLO.t_rlo_end_1 == 13700) & (RLO.event == 52)].ID.unique()
+    RLO_mergers = d.loc[d.ID.isin(RLO_merger_IDs)]
+    # remove the mergers from RLO
+    RLO = RLO.loc[~(RLO.ID.isin(RLO_merger_IDs))]
+
+    # First consider the mergers that occur due to failed CE
+    # Could add in evolutionary transition to this but will keep simple for now
+    CE_merger = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift() == 511)].ID.unique()
+    # remove them from the merger frame
+    RLO_mergers = RLO_mergers.loc[~RLO_mergers.ID.isin(CE_merger)]
+
+    # Next count mergers that jump from RLO to merger
+    contact_merger = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift() == 31)].ID.unique()
+    contact_merger_contact = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift() == 53)].ID.unique()
+    contact_merger_kchange_1 = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift(2) == 31)].ID.unique()
+    contact_merger_kchange_2 = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift(3) == 31)].ID.unique()
+    contact_merger = np.append(contact_merger, contact_merger_contact)
+    contact_merger = np.append(contact_merger, contact_merger_kchange_1)
+    contact_merger = np.append(contact_merger, contact_merger_kchange_2)
+    # remove them from the merger frame
+    RLO_mergers = RLO_mergers.loc[~RLO_mergers.ID.isin(contact_merger)]
+
+    # Next count mergers from double core common envelope
+    # Could add in evolutionary transition to this but will keep simple for now
+    DCCE_merger = RLO_mergers.loc[(RLO_mergers.event == 52) & (RLO_mergers.event.shift() == 513)].ID
+    # remove them from the merger frame
+    RLO_mergers = RLO_mergers.loc[~RLO_mergers.ID.isin(DCCE_merger)]
+
+    # print leftovers
+    print(f'Number of other RLO mergers: {len(RLO_mergers)}')
+    for id in RLO_mergers.ID[:10]:
+        print(d.loc[d.ID == id])
+
+    # Next look at successful RLO events
+    # First find DCCE
+    DCCE = RLO.loc[(RLO.event == 513)].ID
+    # remove them
+    RLO = RLO.loc[~RLO.ID.isin(DCCE)]
+
+    # Next find CE from primary
+    CE_1 = RLO.loc[(RLO.event == 511) & (RLO.event.shift() == 31)].ID
+    # remove them
+    RLO = RLO.loc[~RLO.ID.isin(CE_1)]
+
+    #Next find stable mass transfer from primary
+    SMT_1 = RLO.loc[RLO.event == 31].ID
+    # remove them
+    RLO = RLO.loc[~RLO.ID.isin(SMT_1)]
+
+    # Next find CE from secondary [this really shouldn't happen often]
+    CE_2 = RLO.loc[(RLO.event == 512) & (RLO.event.shift() == 32)].ID
+    # remove them
+    RLO = RLO.loc[~RLO.ID.isin(CE_2)]
+    
+    # Next find stable mass transfer from secondary [this really shouldn't happen often]
+    SMT_2 = RLO.loc[RLO.event == 32].ID
+    # remove them
+    RLO = RLO.loc[~RLO.ID.isin(SMT_2)]
+    
+    # print leftovers
+    print(f'Number of other RLO events: {len(RLO)}')
+    print()
+    
     first_RLO = {'SMT_1': SMT_1,
                  'SMT_2': SMT_2,
                  'CE_1': CE_1,
                  'CE_2': CE_2,
                  'DCCE': DCCE,
-                 'merger': merger,
-                 'nonRLO': nonRLO,}
+                 'failed_CE_merger': CE_merger,
+                 'contact_merger': contact_merger,
+                 'DCCE_merger': DCCE_merger,
+                 'nonRLO': nonRLO,
+                 'leftovers': RLO.ID}
     return first_RLO
 
     

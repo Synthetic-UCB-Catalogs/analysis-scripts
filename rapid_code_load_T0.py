@@ -591,7 +591,10 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat = pd.read_csv(ifilepath, sep='\s+',
         names=cols, skiprows=1, dtype=dtype_mapping
         )
-            
+
+    # drop any Sybmiotic/BSS states
+    dat = dat.loc[~dat.evol_type.isin([12,13,14])]
+    
     dat["semiMajor"] = ((dat.period/365.25)**2 * (dat.mass1 + dat.mass2))**(1/3) * 214.94
     if "eccentricity" not in dat.columns:
         dat["eccentricity"] = np.zeros(len(dat))
@@ -661,7 +664,6 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() > dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() > dat.kstar_2), "event"] = 12
-    #dat.loc[(dat.evol_type == 2) & (dat.kstar_2 < 10), "event"] = 12
     dat.loc[(dat.evol_type == 3), "event"] = 3
     dat.loc[(dat.evol_type == 3) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == 1) & (dat.kstar_2 == 1) & (dat.mass1 > dat.mass2), "event"] = 31
@@ -675,8 +677,13 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 6), "event"] = 52
 
 
-    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 511
-    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 < dat.kstar_2) & (dat.kstar_1 >= 7), "event"] = 512
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 > dat.kstar_2), "event"] = 511
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_2.shift() < dat.kstar_1.shift()) & (dat.kstar_1.shift() >= 7), "event"] = 512
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([10,11,12])), "event"] = 512
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([7,8,9])), "event"] = 513
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 <= 9), "event"] = 52
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 == 15), "event"] = 52
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1.isin([7,8,9])) & (dat.kstar_2.isin([7,8,9])), "event"] = 43
 
     dat.loc[(dat.evol_type == 8), "event"] = 4
     dat.loc[(dat.evol_type == 9) & (dat.kstar_1 == 15), "event"] = 211
@@ -686,7 +693,7 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 10) & (dat.ID.isin(disruption_IDs)), "event"] = 83
     dat.loc[(dat.evol_type == 10) & ~(dat.ID.isin(disruption_IDs)) & (dat.period > 0), "event"] = 81
     dat.loc[(dat.evol_type == 10) & ~(dat.ID.isin(disruption_IDs)) & (dat.period == 0), "event"] = 84    
-    
+
     dat = dat.fillna(np.nan)
     dat = dat[["ID","UID","time","event",
                "semiMajor","eccentricity","type1",
@@ -703,7 +710,7 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
                    "NLINES": len(dat),
                    "Z": metallicity}
     
-    header = pd.DataFrame.from_dict([header_info])
+    #header = pd.DataFrame.from_dict([header_info])
 
     # Save in hdf5 format
     if outputpath is None:
@@ -712,7 +719,7 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.to_hdf(ofilepath, key='data', mode='w')
     with pd.HDFStore(ofilepath) as hdf_store:
         hdf_store.put('data', dat, format='table') 
-        hdf_store.get_storer('data').attrs.metadata = header
+        hdf_store.get_storer('data').attrs.metadata = header_info
     return dat # typically not needed, but possibly good for testing
 
 

@@ -25,16 +25,16 @@ import h5py as h5
 import tarfile
 import cmasher as cmr
 from collections import Counter
-
+from rapid_code_load_T0 import load_T0_data
+import rapid_code_load_T0 as load
 import formation_channels as fc
 # -
-COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
-METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
-COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
-SeBa_T0 = convert_SeBa_data_to_T0('data/pilot_runs_raw_data/SeBa/SeBa-simple.data', metallicity=0.02)
-
-SeBa_T0.loc[SeBa_T0.ID == 274778][['ID', 'time', 'event', 'mass1', 'type1', 'mass2', 'type2', 'semiMajor']]
-
+#BSE_T0 = load.convert_BSE_data_to_T0('data/pilot_runs_raw_data/BSE/fiducial/BinaryRun.dat', 0.02, outputpath='data/T0_format_pilot/BSE/fiducial', hdf5_filename="BSE_T0.hdf5")
+BSE_T0, BSE_header = load_T0_data('data/T0_format_pilot/BSE/fiducial/BSE_T0.hdf5')
+#COSMIC_T0, COSMIC_header = load_T0_data('data/T0_format_pilot/COSMIC/basic/COSMIC_T0.hdf5')
+#METISSE_T0, METISSE_header = load_T0_data('data/T0_format_pilot/METISSE-COSMIC/basic/METISSE_T0.hdf5')
+#COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.hdf5')
+#SeBa_T0, SeBa_header = load_T0_data('data/IC_variations/qmin_01/SeBa_T0.hdf5')
 
 def get_first_RLO_figure(d, q=0.49, savefig=None):
     ZAMS, WDMS, DWD = fc.select_evolutionary_states(d=d)
@@ -50,7 +50,7 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
 
     #check that all IDs are accounted for:
     all_IDs = d.ID.unique()
-    keys = ['SMT_1', 'SMT_2', 'CE_1', 'CE_2', 'DCCE', 'merger', 'nonRLO']
+    keys = ['SMT_1', 'SMT_2', 'CE_1', 'CE_2', 'DCCE', 'DCCE_merger', 'failed_CE_merger', 'contact_merger', 'nonRLO', 'leftovers']
 
     id_check = []
     for k in keys:
@@ -60,11 +60,12 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
         print("warning, you missed ids:", np.setxor1d(all_IDs, id_check))
         print(len(all_IDs), len(id_check))
 
-    SMT_colors = cmr.take_cmap_colors('cmr.sapphire', 2, cmap_range=(0.6, 0.85), return_fmt='hex')
+    SMT_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.6, 0.85), return_fmt='hex')
     CE_colors = cmr.take_cmap_colors('cmr.sunburst', 3, cmap_range=(0.3, 0.9), return_fmt='hex')
-    other_colors = cmr.take_cmap_colors('cmr.neutral', 2, cmap_range=(0.6, 0.95), return_fmt='hex')
+    other_colors = cmr.take_cmap_colors('cmr.sapphire', 5, cmap_range=(0.3, 0.95), return_fmt='hex')
 
-    keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['merger', 'nonRLO']]
+    
+    keys_list = [['SMT_1', 'SMT_2'], ['CE_1', 'CE_2', 'DCCE'], ['DCCE_merger', 'failed_CE_merger', 'contact_merger', 'nonRLO', 'leftovers']]
     colors_list = [SMT_colors, CE_colors, other_colors]
 
     fig = plt.figure(figsize=(6,4.9))
@@ -74,7 +75,6 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
             ZAMS_select = init_q.loc[(init_q.ID.isin(first_RLO[k]))]
             
             if len(ZAMS_select) > 0:
-                #if k != 'failed_CE':
                 plt.scatter(ZAMS_select.porb, ZAMS_select.mass1, c=c, s=5.8, label=k, zorder=200 - (1+ii)*5, marker='s')
                 print(len(ZAMS_select), k)
                 
@@ -88,7 +88,7 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
     
     
     plt.xlim(1, 10000)
-    plt.ylim(0.7, 13)
+    plt.ylim(min(init_q.mass1), max(init_q.mass1))
     
     plt.xlabel('orbital period [day]')
     plt.ylabel('M$_1$ [Msun]')
@@ -99,9 +99,35 @@ def get_first_RLO_figure(d, q=0.49, savefig=None):
 
     return first_RLO
 
-first_RLO_COSMIC_01 = get_first_RLO_figure(COSMIC_T0, q=0.08, savefig='COSMIC_first_RLO_channels_qinit_01.png')
-first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
-first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
+initBSE = BSE_T0.groupby('ID').first()
+
+q = (initBSE.mass2/initBSE.mass1).values
+
+q
+
+print(np.round(q[(q<0.9) & (q > 0.89)], 3))
+print(len(np.round(q[(q<0.9) & (q > 0.89)], 3)))
+
+
+first_RLO_BSE_01 = get_first_RLO_figure(BSE_T0, q=0.08, savefig='BSE_first_RLO_channels_qinit_01.png')
+first_RLO_BSE_05 = get_first_RLO_figure(BSE_T0, q=0.5, savefig='BSE_first_RLO_channels_qinit_05.png')
+first_RLO_BSE_09 = get_first_RLO_figure(BSE_T0, q=0.89, savefig='BSE_first_RLO_channels_qinit_09.png')
+
+BSE_01_SMT1 = BSE_T0.loc[BSE_T0.ID.isin(first_RLO_BSE_01['SMT_1'])]
+
+for id in first_RLO_BSE_01['SMT_1'][:10]:
+    print(BSE_T0.loc[BSE_T0.ID == id][['time', 'event', 'semiMajor', 'type1', 'type2', 'mass1', 'mass2']])
+
+BSE_05_SMT1 = BSE_T0.loc[BSE_T0.ID.isin(first_RLO_BSE_05['SMT_1'])]
+
+ceid = BSE_01_SMT1.loc[BSE_01_SMT1.event == 511.0].ID
+print(len(ceid))
+
+for id in ceid[:10]:
+    print(id)
+    print(BSE_05_SMT1.loc[BSE_05_SMT1.ID == id][['time', 'type1', 'type2', 'event', 'mass1', 'mass2', 'semiMajor']])
+    print()
+    print()
 
 # ### First let's load the different pilot runs for COSMIC
 
@@ -118,7 +144,7 @@ first_RLO_COSMIC_i_05 = get_first_RLO_figure(COSMIC_T0_intermediate, q=0.49, sav
 #
 # #### We can look at the different evolutions to see what is happening with the different outcomes of the first RLO 
 
-COSMIC_b_05_merger = COSMIC_T0_basic.loc[COSMIC_T0_basic.ID.isin(first_RLO_COSMIC_b_05['merger'])]
+COSMIC_b_05_merger = COSMIC_T0_basic.loc[COSMIC_T0_basic.ID.isin(first_RLO_COSMIC_b_05['failed_CE_merger'])]
 
 print(len(COSMIC_b_05_merger.ID.unique()))
 
@@ -214,7 +240,6 @@ COMPAS_T0, COMPAS_header = load_T0_data('data/T0_format_pilot/COMPAS/COMPAS_T0.h
 
 first_RLO_COSMIC_05 = get_first_RLO_figure(COSMIC_T0_basic, q=0.49, savefig='COSMIC_first_RLO_channels_qinit_05.png')
 first_RLO_COSMIC_09 = get_first_RLO_figure(COSMIC_T0_basic, q=0.88, savefig='COSMIC_first_RLO_channels_qinit_09.png')
->>>>>>> origin/main
 
 first_RLO_METISSE_01 = get_first_RLO_figure(METISSE_T0, q=0.08, savefig='METISSE_first_RLO_channels_qinit_01.png')
 first_RLO_METISSE_05 = get_first_RLO_figure(METISSE_T0, q=0.49, savefig='METISSE_first_RLO_channels_qinit_05.png')
