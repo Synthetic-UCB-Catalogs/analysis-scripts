@@ -11,7 +11,7 @@ import basicplot as bp
 
 ## arguments
 code = 'COSMIC'
-home = "/Users/gijsnelemans/Compute/Untitled Folder/"
+home = "/Users/gijsnelemans/Compute/Untitled Folder/" # put your local folder here
 variation = 'porb_log_uniform'
 bin_dir = home+'data_products/simulated_binary_populations/monte_carlo_comparisons/initial_condition_variations/'+variation
 gal_dir = home+'data_products/simulated_galaxy_populations/monte_carlo_comparisons/initial_condition_variations/'+variation
