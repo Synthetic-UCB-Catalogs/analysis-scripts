@@ -33,6 +33,7 @@
 # <div>
 
 import rapid_code_load_T0 as load
+import formation_channels as fc
 
 # #### First we check BSE
 
@@ -166,11 +167,11 @@ for id in METISSE_T0_intermediate_RLO.ID.unique()[:10]:
 
 # #### Next up is SeBa
 
-SeBa_T0_basic = load.convert_SeBa_data_to_T0(
-    ifilepath="data/pilot_runs_raw_data/SeBa/SeBa-simple.data", 
-    metallicity=0.02, 
-    outputpath="data/T0_format_pilot/SeBa/basic", 
-    hdf5_filename="SeBa_T0.hdf5")
+SeBa_T0_basic, header = load.load_T0_data(ifilepath="data/T0_format_pilot/SeBa/basic/SeBa_T0.hdf5")
+
+SeBa_T0_basic
+
+first_RLO_SeBa = fc.first_interaction_channels(SeBa_T0_basic)
 
 SeBa_T0_basic_RLO = SeBa_T0_basic.loc[SeBa_T0_basic.event.isin([511])]
 for id in SeBa_T0_basic_RLO.ID.unique()[200:210]:
