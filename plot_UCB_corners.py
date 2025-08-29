@@ -89,7 +89,7 @@ N_LISA = N_candidates*len(LISA_Gal)/len(Galaxy)
 print(N_candidates, N_LISA)
 
 ## plot ZAMS hexbin
-log_P = logP_from_a(ZAMS.mass1,ZAMS.mass1,ZAMS.semiMajor)
+log_P = logP_from_a(ZAMS.mass1,ZAMS.mass2,ZAMS.semiMajor)
 log_tau = np.zeros(len(log_P))
 bp.hexbin_plot(ZAMS.mass1,ZAMS.mass2,log_P,log_tau,code+' @ZAMS',bins,colmap,Ngrid,limits)
 
@@ -99,7 +99,7 @@ bp.point_plot(ZAMS.mass1,ZAMS.mass2,log_P,log_tau,mask,code+' @ZAMS points',limi
 
 ## plot WDMS hexbin
 
-log_P = logP_from_a(WDMS.mass1,WDMS.mass1,WDMS.semiMajor)
+log_P = logP_from_a(WDMS.mass1,WDMS.mass2,WDMS.semiMajor)
 log_tau = np.log10(WDMS.time)
 bp.hexbin_plot(WDMS.mass1,WDMS.mass2,log_P,log_tau,code+' @WDMS formation',bins,colmap,Ngrid,limits)
 
@@ -109,19 +109,19 @@ bp.point_plot(WDMS.mass1,WDMS.mass2,log_P,log_tau,mask,code+' @WDMS points',limi
 
 ## plot DWD hexbin
 
-log_P = logP_from_a(DWD.mass1,DWD.mass1,DWD.semiMajor)
+log_P = logP_from_a(DWD.mass1,DWD.mass2,DWD.semiMajor)
 log_tau = np.log10(DWD.time)
 
 bp.hexbin_plot(DWD.mass1,DWD.mass2,log_P,log_tau,code+' @DWD formation',bins,colmap,Ngrid,limits)
 
 ## plot LISA full Galaxy
-log_P = logP_from_a(Galaxy.mass1,Galaxy.mass1,Galaxy.semiMajor)
+log_P = logP_from_a(Galaxy.mass1,Galaxy.mass2,Galaxy.semiMajor)
 log_tau = np.log10(Galaxy.time)
 
 bp.hexbin_plot(Galaxy.mass1,Galaxy.mass2,log_P,log_tau,code+' Galaxy {:,} sources'.format(int(N_candidates)),bins,colmap,Ngrid,limits)
 
 ##bp. plot LISA detected sources
-log_P = logP_from_a(LISA_Gal.mass1,LISA_Gal.mass1,LISA_Gal.semiMajor)
+log_P = logP_from_a(LISA_Gal.mass1,LISA_Gal.mass2,LISA_Gal.semiMajor)
 log_tau = np.log10(LISA_Gal.time)
 
 bp.hexbin_plot(LISA_Gal.mass1,LISA_Gal.mass2,log_P,log_tau,code+' Galaxy only {:,} LISA sources'.format(int(N_LISA)),bins,colmap,Ngrid,limits)
