@@ -10,7 +10,7 @@ def P_from_a(m1, m2, a):
     return 0.116*np.sqrt(a**3/(Mtot))
 
 
-def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None):
+def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
 
     Pclip = None
     M1clip = None
@@ -88,10 +88,10 @@ def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None):
     ax_new.set_xlabel(r'$\log \tau$ [Myr]')
 
     # Show the plot
-    plt.savefig(title+'.png')
+    plt.savefig(f"{savepath+title+'.png'}")
     #plt.show()
 
-def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limits=None):
+def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limits=None,savepath='./'):
 
     Pclip = None
     M1clip = None
@@ -154,7 +154,7 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
     ax_new.set_xlabel(r'$\log \tau$ [Myr]')
 
     # Show the plot
-    plt.savefig(title+'.png')
+    plt.savefig(f"{savepath+title+'.png'}")
     #plt.show()
 
 
