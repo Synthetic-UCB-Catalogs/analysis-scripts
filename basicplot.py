@@ -113,12 +113,7 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
     fig, axs = plt.subplots(3, 3, figsize=(12, 10), gridspec_kw={'height_ratios': [0.2, 1, 1], 'width_ratios': [0.2, 1, 1]})
     fig.suptitle(title,y=0.92)
 
-    sns.kdeplot(x=log_P, ax=axs[0,1], fill=True, color='blue',cut=0,clip=Pclip)
-    sns.kdeplot(y=M1, ax=axs[1,0], fill=True, color='blue',cut=0,clip=M1clip)
-    sns.kdeplot(y=M2, ax=axs[2,0], fill=True, color='blue',cut=0,clip=M2clip)
-    axs[2, 0].set_ylabel(r'$M_2 [M_\odot]$')
-    axs[1, 0].set_ylabel(r'$M_1 [M_\odot]$')
-
+    
     # Top left: Hexbin of log_P vs M1
     hb = axs[1, 1].hexbin(log_P, M1, gridsize=Ngrid, cmap=colmap,bins=bins,mincnt=1,extent=extentPM1)
     #axs[1, 1].yaxis.set_ticklabels([])
@@ -141,6 +136,18 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
     axs[2, 2].tick_params(left=True,right=True,labelright=True,labelleft=False)
     axs[2, 2].yaxis.set_label_position("right")
 
+    # Add KDEs of the data projected on the three axes
+    sns.kdeplot(x=log_P, ax=axs[0,1], fill=True, color='blue',cut=0,clip=Pclip)
+    sns.kdeplot(y=M1, ax=axs[1,0], fill=True, color='blue',cut=0,clip=M1clip)
+    sns.kdeplot(y=M2, ax=axs[2,0], fill=True, color='blue',cut=0,clip=M2clip)
+    axs[2, 0].set_ylabel(r'$M_2 [M_\odot]$')
+    axs[1, 0].set_ylabel(r'$M_1 [M_\odot]$')
+    
+    # Set plot limits to match the hexbin limits
+    axs[0,1].set_xlim(axs[1,1].get_xlim())
+    axs[1,0].set_ylim(axs[1,1].get_ylim())
+    axs[2,0].set_ylim(axs[2,1].get_ylim())
+    
     # Remove the space between the panels
     fig.subplots_adjust(hspace=0, wspace=0)
     fig.delaxes(axs[1, 2])
