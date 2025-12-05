@@ -32,7 +32,7 @@ def load_T0_data(ifilepath, code=None, **kwargs):
     header : `pandas.DataFrame`
         header for dat
     """
-    if code == "ComBinE":
+    if code == "ComBin":
         col_standard = ["ID","UID","SID","time","event",
                         "semiMajor","eccentricity","type1",
                         "mass1","radius1","Teff1","massHeCore1",
