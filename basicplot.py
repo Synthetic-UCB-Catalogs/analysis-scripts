@@ -9,6 +9,14 @@ def P_from_a(m1, m2, a):
     Mtot = m1 + m2
     return 0.116*np.sqrt(a**3/(Mtot))
 
+# Period-core mass relation after stable mass transfer from Lin et al. 2011, adapted to match RPDH95 and TS at high mass
+def P_Mc_Lin(Mc,low=False):
+    f = 1.1
+    if (low==True):
+        f=0.8
+    return f*4.6e6 * Mc**9/(1 + 25* Mc**3.5 + 29*Mc**6)**(1.5)
+
+
 
 def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
 
@@ -91,7 +99,7 @@ def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
     plt.savefig(f"{savepath+title+'.png'}")
     #plt.show()
 
-def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limits=None,savepath='./'):
+def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limits=None,savepath='./',plotlines=None):
 
     Pclip = None
     M1clip = None
@@ -110,12 +118,24 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
         extentPM2 = limits[0:2]+limits[4:6]
         extentM1M2 = limits[2:6]
 
+    if (plotline != None):
+
+        plot_diagonal = plotline[0]
+        plot_stable1 = plotline[1]
+        plot_stable2 = plotline[2]
+
+    
+
     fig, axs = plt.subplots(3, 3, figsize=(12, 10), gridspec_kw={'height_ratios': [0.2, 1, 1], 'width_ratios': [0.2, 1, 1]})
     fig.suptitle(title,y=0.92)
 
     
     # Top left: Hexbin of log_P vs M1
     hb = axs[1, 1].hexbin(log_P, M1, gridsize=Ngrid, cmap=colmap,bins=bins,mincnt=1,extent=extentPM1)
+    if (plot_stable1):
+        Mc = np.linspace(M1.min(),M1.max(),20)
+        P = np.log10(P_Mc_Lin(Mc))
+        axs[1, 1].plot(P,Mc,'k--')
     #axs[1, 1].yaxis.set_ticklabels([])
     axs[1, 1].tick_params(direction="in")
     axs[1, 1].tick_params(left=True,top=True,labelbottom=False,labelleft=False)
@@ -123,6 +143,10 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
 
     # Bottom left: Hexbin of log_P vs M2
     hb2 = axs[2, 1].hexbin(log_P, M2, gridsize=Ngrid, cmap=colmap,bins=bins,mincnt=1,extent=extentPM2)
+    if (plot_stable2):
+        Mc = np.linspace(M2.min(),M2.max(),20)
+        P = np.log10(P_Mc_Lin(Mc))
+        axs[1, 1].plot(P,Mc,'k--')
     axs[2, 1].set_xlabel(r'$\log P$ [d]')
     axs[2, 1].yaxis.set_ticklabels([])
     axs[2, 1].tick_params(direction="in")
@@ -130,6 +154,8 @@ def hexbin_plot(M1,M2,log_P,log_tau,title,bins=None,colmap='Blues',Ngrid=30,limi
 
     # Bottom right: Hexbin of M1 vs M2
     hb3 = axs[2, 2].hexbin(M1, M2, gridsize=Ngrid, cmap=colmap,bins=bins,mincnt=1,extent=extentM1M2)
+    if (plot_diagonal):
+        axs[2, 2].plot([M1.min(),M1.max()], [M1.min(),M1.max()],color='grey',linestyle='dotted')
     axs[2, 2].set_xlabel(r'$M_1 [M_\odot]$')
     axs[2, 2].set_ylabel(r'$M_2 [M_\odot]$')
 #    axs[2, 2].yaxis.tick_right()
