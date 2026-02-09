@@ -558,36 +558,71 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     header : `pandas.DataFrame`
         header for dat
     """
-    # load data
-    df_header = pd.read_csv(ifilepath, nrows=0)
-    available_columns = df_header.columns.str.strip().str.lstrip("#")
-    
-    if any(col.lower() == "ecc" for col in available_columns):
-        cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "eccentricity", "evol_type"]
-        dtype_mapping = {
-                            "UID": int,
-                            "time": float,
-                            "kstar_1": int,
-                            "kstar_2": int,
-                            "mass1": float,
-                            "mass2": float,
-                            "period": float,
-                            "eccentricity": float,
-                            "evol_type": int
-        }
-    else:
-        cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "evol_type"]
-        dtype_mapping = {
-                            "UID": int,
-                            "time": float,
-                            "kstar_1": int,
-                            "kstar_2": int,
-                            "mass1": float,
-                            "mass2": float,
-                            "period": float,
-                            "evol_type": int
-        }
-        
+    # load data and check for header to get formatting
+    with open(ifilepath, 'r') as f:
+        first_line = f.readline().strip()
+        if first_line.startswith("#"):
+            header = first_line.lstrip("#").strip().split()
+            # handle as header
+            df_header = pd.read_csv(ifilepath, nrows=0)
+            available_columns = df_header.columns.str.strip().str.lstrip("#")
+            if any(col.lower() == "ecc" for col in available_columns):
+                cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "eccentricity", "evol_type"]
+                dtype_mapping = {
+                                    "UID": int,
+                                    "time": float,
+                                    "kstar_1": int,
+                                    "kstar_2": int,
+                                    "mass1": float,
+                                    "mass2": float,
+                                    "period": float,
+                                    "eccentricity": float,
+                                    "evol_type": int
+                }
+            else:
+                cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "evol_type"]
+                dtype_mapping = {
+                                    "UID": int,
+                                    "time": float,
+                                    "kstar_1": int,
+                                    "kstar_2": int,
+                                    "mass1": float,
+                                    "mass2": float,
+                                    "period": float,
+                                    "evol_type": int
+                }
+                
+        else:
+            # if no header, just go with the number of columns to decide
+            num_columns = len(first_line.split())
+            if num_columns == 8:
+                cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "evol_type"]
+                dtype_mapping = {
+                                    "UID": int,
+                                    "time": float,
+                                    "kstar_1": int,
+                                    "kstar_2": int,
+                                    "mass1": float,
+                                    "mass2": float,
+                                    "period": float,
+                                    "evol_type": int
+                }
+            elif num_columns == 9:
+                cols = ["UID", "time", "kstar_1", "kstar_2", "mass1", "mass2", "period", "eccentricity", "evol_type"]
+                dtype_mapping = {
+                                    "UID": int,
+                                    "time": float,
+                                    "kstar_1": int,
+                                    "kstar_2": int,
+                                    "mass1": float,
+                                    "mass2": float,
+                                    "period": float,
+                                    "eccentricity": float,
+                                    "evol_type": int
+                }
+            else:
+                raise Error("You have likely specified a non-standard BSE file; the columns should either be:\n UID, time, kstar_1, kstar_2, mass1, mass2, period, evol_type or UID, time, kstar_1, kstar_2, mass1, mass2, period, eccentricity, evol_type")
+                    
     dat = pd.read_csv(ifilepath, sep='\s+',
         names=cols, skiprows=1, dtype=dtype_mapping
         )
@@ -665,6 +700,7 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() > dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 3), "event"] = 3
+    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == dat.kstar_2) & (dat.kstar_1.isin([121, 122, 123, 125, 1251, 1252])), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 31
     dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == 1) & (dat.kstar_2 == 1) & (dat.mass1 > dat.mass2), "event"] = 31
 
@@ -672,8 +708,16 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
 
     dat.loc[(dat.evol_type == 4), "event"] = 4
     #maybe select 41 vs 42 based on kstar type?
-    
+    # set double core CEs
     dat.loc[(dat.evol_type == 5), "event"] = 53
+
+    dat.loc[((dat.event == 53) & (dat.type1 == 123) & (dat.type2 == 123)), "event"] = 513
+    dat.loc[((dat.event == 53) & (dat.type1 == 124) & (dat.type2 == 123)), "event"] = 513
+    dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1251)), "event"] = 513
+    dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1252)), "event"] = 513
+    dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1252)), "event"] = 513
+    dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1251)), "event"] = 513
+    
     dat.loc[(dat.evol_type == 6), "event"] = 52
 
 
@@ -681,6 +725,9 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.shift() < dat.kstar_1.shift()) & (dat.kstar_1.shift() >= 7), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([10,11,12])), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([7,8,9])), "event"] = 513
+
+    # hacky catch for weird logging of CE
+    dat.loc[(dat.event == 512) & (dat.type1.isin([22, 23])) & (dat.type2.isin([22, 23])), "event"] = 43
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 <= 9), "event"] = 52
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 == 15), "event"] = 52
     dat.loc[(dat.evol_type == 7) & (dat.kstar_1.isin([7,8,9])) & (dat.kstar_2.isin([7,8,9])), "event"] = 43
