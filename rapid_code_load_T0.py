@@ -79,6 +79,25 @@ def load_T0_data(ifilepath, code=None, **kwargs):
                            "NSYS": int(T0_info[6]), 
                            "NLINES": int(T0_info[7]),
                            "Z": metallicity}
+    elif code == "BPASS":
+        metallicity = 0.02
+        #read in the data with the columns
+        dat = pd.read_csv(ifilepath, sep='\s+', skiprows=2, skip_blank_lines=True)
+        
+        #read in the T0 info in the header
+        lines_number = 2
+        with open(ifilepath) as input_file:
+            head = [next(input_file) for _ in range(lines_number)]
+            T0_info = head[1].replace(" ", "").split(",")
+            header_info = {"cofVer" : float(T0_info[0]), 
+                           "cofLevel": T0_info[1],
+                           "cofExtension": "None", 
+                           "bpsName": T0_info[3],
+                           "bpsVer": T0_info[4], 
+                           "contact": T0_info[5], 
+                           "NSYS": int(T0_info[6]), 
+                           "NLINES": int(T0_info[7]),
+                           "Z": metallicity}
 
     #elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
     else:
