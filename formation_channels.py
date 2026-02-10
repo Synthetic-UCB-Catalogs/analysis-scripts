@@ -26,12 +26,14 @@ def select_evolutionary_states(d):
 
     ZAMS = d.groupby('ID', as_index=False).first()
 
-    WDMS1 = d.loc[((d.type1.isin([21,22,23]) & (d.type2 == 121))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
-    WDMS2 = d.loc[((d.type2.isin([21,22,23]) & (d.type1 == 121))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
+    # the extra 12 handles BPASS
+    WDMS1 = d.loc[((d.type1.isin([21,22,23]) & (d.type2.isin([12, 121])))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
+    WDMS2 = d.loc[((d.type2.isin([21,22,23]) & (d.type1.isin([12, 121])))) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
 
     WDMS = pd.concat([WDMS1, WDMS2])
     DWD = d.loc[(d.type1.isin([21,22,23])) & (d.type2.isin([21,22,23])) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
     
+    # this handles ComBinE
     if len(DWD) == 0:
         WDMS1 = d.loc[((d.type1 == 2) & (d.type2 == 121)) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
         WDMS2 = d.loc[((d.type2 == 2) & (d.type1 == 121)) & (d.semiMajor > 0)].groupby('ID', as_index=False).first()
