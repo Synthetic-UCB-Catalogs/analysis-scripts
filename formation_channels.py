@@ -168,7 +168,8 @@ def first_interaction_channels(d, verbose=False):
     CE_1 = RLO.loc[(RLO.event == 511) & (RLO.event.shift() == 31)].ID.unique()
     CE_1_BSE = RLO.loc[(RLO.event == 511) & (RLO.event.shift() == 3)].ID.unique()
     CE_1_BPASS = RLO.loc[(RLO.event == 511) & (RLO.event.shift() == 13)].ID.unique()
-    CE_1 = np.append(CE_1, CE_1_BSE, CE_1_BPASS)
+    CE_1 = np.append(CE_1, CE_1_BSE)
+    CE_1 = np.append(CE_1, CE_1_BPASS)
     
     # remove them
     RLO = RLO.loc[~RLO.ID.isin(CE_1)]
