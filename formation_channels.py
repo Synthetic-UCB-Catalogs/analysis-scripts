@@ -268,36 +268,42 @@ def first_interaction_channels(d, verbose=False):
     return first_RLO
 
     
-def first_interaction_channels_simple(d, verbose=False):
-    '''Split out the different types of channels that could occur
-    in the first interaction with only SMT, CE, SMT->CE, other
+def simplify_channels_dict(channels_dict):
+    '''Simplify the first RLO channel dictionary such that 
+    all merger types are added to a single merger key and 
+    everything else is added to other
 
     Parameters
     ----------
-    d : `pandas.DataFrame`
-        contains T0 data for binaries as specified by BinCodex
-
-    verbose : `bool`
-        Sets whether to print out detailed results
+    channels_dict : `Dictionary`
+        contains a list of IDs for different interaction channels
 
     Returns
     -------
-    first_RLO : `Dictionary`
-        contains a list of IDs for different interaction channels
+    channels_simplified : `Dictionary`
+        contains a list of IDs for SMT_1, CE_1, DCCE, mergers, nonRLO, other
     '''
-
-# def select_final_state_ids(d):
-#    '''Sets the final state based on the evolution
-#
-#    Parameters
-#    ----------
-#    d : `pandas.DataFrame`
-#        T0 data with all events listed
-#
-#    Returns
-#    -------
-#
-#    '''
+    channels_simplified = {}
+    merger_ids = []
+    other_ids = []
+    
+    for key, arr in channels_dict.items():
+        if key in ('SMT_1', 'CE_1', 'DCCE', 'nonRLO'):
+            channels_simplified[key] = arr
+        elif key in ('failed_CE_merger', 'contact_merger', 'DCCE_merger', 'other_merger','MS_merger'):
+            if len(merger_ids) == 0:
+                merger_ids = arr
+            else:
+                merger_ids = np.append(merger_ids, arr)
+        else:
+            if len(other_ids) == 0:
+                other_ids = arr
+            else:
+                other_ids = np.append(other_ids, arr)
+    channels_simplified['mergers'] = merger_ids
+    channels_simplified['other'] = other_ids
+    
+    return channels_simplified
 
 
 def select_channels(d):
