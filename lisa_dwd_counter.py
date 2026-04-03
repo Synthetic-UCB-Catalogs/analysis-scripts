@@ -1,9 +1,36 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import h5py
 import os
 
-def dwd_count_single_code(code_name, var_type, var_name, rclone_flag=True):
+def load_channel_ids(filename, code, variation):
+    """
+    Loads the binary evolution channel IDs from an HDF5 file.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the HDF5 file.
+    code: str
+        The formaton channel you want binary IDs for.
+    variation: str
+        The variation you want formaton channel IDs for.
+
+    Returns
+    -------
+    dict
+        Dictionary containing the stored data.
+    """
+    key = f'{code}_{variation}'
+    with h5py.File(filename, "r") as f:
+        if key not in f:
+            raise KeyError(f"No group named '{key}' in {filename}")
+        grp = f[key]
+        return {k: grp[k][()] for k in grp}
+
+def dwd_count_single_code(code_name, var_type, var_name, rclone_flag=True,
+                          channel=None):
     """
     Calculates the number of LISA DWDs predicted in the Galaxy for a single
     code/variation. If rclone_flag is True, filepaths assume you have set up
@@ -25,6 +52,9 @@ def dwd_count_single_code(code_name, var_type, var_name, rclone_flag=True):
     rclone_flag: bool
         Whether you have set up rclone for the filepaths in the Google Drive or
         not.
+    channel: str or None
+        Specify the name of a specific formation channel to count. If None,
+        counts DWDs from all channels.
         
     Returns
     -------
@@ -68,7 +98,21 @@ def dwd_count_single_code(code_name, var_type, var_name, rclone_flag=True):
     
     lisa_dwd_array = pd.read_csv(lisa_dwd_filepath)
     
-    dwd_count = len(lisa_dwd_array)
+    if channel is None:                     #count all channels
+        dwd_count = len(lisa_dwd_array)
+    else:                                   #count one channel
+        if rclone_flag == True:
+            path_to_channel_file = os.environ['UCB_GOOGLE_DRIVE_DIR'] + \
+                '/simulated_binary_populations/monte_carlo_comparisons/' + \
+                'channel_ids.h5'
+        else:
+            path_to_channel_file = 'data_products' + \
+                '/simulated_binary_populations/monte_carlo_comparisons/' + \
+                'channel_ids.h5'
+        channel_ids = load_channel_ids(filename=path_to_channel_file, 
+            code=code_name, variation=var_name)
+        mask = lisa_dwd_array.ID.isin(channel_ids[channel])
+        dwd_count = len(lisa_dwd_array[mask])
     
     return dwd_count
 
@@ -221,7 +265,7 @@ def all_dwd_single_code(code_name, var_type, var_name, rclone_flag=True):
     return total_dwd_count
 
 def lisa_dwd_count_plotter(code_list, var_type, var_list, cmap='rainbow', \
-                           rclone_flag=True):
+                           rclone_flag=True, channel=None):
     """
     Plots the number of LISA DWDs in the Galaxy for specified codes/variations.
     
@@ -240,6 +284,9 @@ def lisa_dwd_count_plotter(code_list, var_type, var_list, cmap='rainbow', \
     rclone_flag: bool
         Whether you have set up rclone for the filepaths in the Google Drive or
         not.
+    channel: str or None
+        Specify the name of a specific formation channel to count. If None,
+        counts DWDs from all channels.
     """
 
     fig, ax = plt.subplots()
