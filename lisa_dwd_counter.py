@@ -298,7 +298,7 @@ def lisa_dwd_count_plotter(code_list, var_type, var_list, cmap='rainbow', \
     for i in range(len(code_list)):
         for j in range(len(var_list)):
             try: ax.bar(i+j*width, dwd_count_single_code(code_list[i], \
-                 var_type, var_list[j], rclone_flag), width, \
+                 var_type, var_list[j], rclone_flag, channel), width, \
                  color=plot_colors[j])
             except FileNotFoundError: ax.bar(i+j*width, np.nan, width, \
                  color=plot_colors[j]) #handles missing codes/variations
