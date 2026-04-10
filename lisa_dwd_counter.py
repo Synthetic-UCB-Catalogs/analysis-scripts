@@ -13,9 +13,9 @@ def load_channel_ids(filename, code, variation):
     filename: str
         Path to the HDF5 file.
     code: str
-        The formaton channel you want binary IDs for.
+        The code you want binary IDs for.
     variation: str
-        The variation you want formaton channel IDs for.
+        The variation you want formation channel IDs for.
 
     Returns
     -------
