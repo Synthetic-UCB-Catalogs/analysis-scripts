@@ -95,8 +95,8 @@ def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
     # Top right: KDE plot of log_tau
     # Create the figure and grid for the subplots
     ax_new = fig.add_axes([0.6, 0.55, 0.3, 0.25])
-    sns.kdeplot(log_tau, ax=ax_new, fill=True, color='green',cut=0,clip=tclip.alpha=0.7)
-    sns.kdeplot(log_tau[mask_LISA], ax=ax_new, fill=True, color='yellow',cut=0,clip=tclip.alpha=0.7)
+    sns.kdeplot(log_tau, ax=ax_new, fill=True, color='green',cut=0,clip=tclip,alpha=0.7)
+    sns.kdeplot(log_tau[mask_LISA], ax=ax_new, fill=True, color='yellow',cut=0,clip=tclip,alpha=0.7)
     ax_new.set_xlabel(r'$\log \tau$ [Myr]')
 
     # Show the plot
