@@ -36,9 +36,12 @@ def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
     fig, axs = plt.subplots(3, 3, figsize=(12, 10), gridspec_kw={'height_ratios': [0.2, 1, 1], 'width_ratios': [0.2, 1, 1]})
     fig.suptitle(title,y=0.92)
 
-    sns.kdeplot(x=log_P, ax=axs[0,1], fill=True, color='blue',cut=0,clip=Pclip)
-    sns.kdeplot(y=M1, ax=axs[1,0], fill=True, color='blue',cut=0,clip=M1clip)
-    sns.kdeplot(y=M2, ax=axs[2,0], fill=True, color='blue',cut=0,clip=M2clip)
+    sns.kdeplot(x=log_P, ax=axs[0,1], fill=True, color='blue',cut=0,clip=Pclip,alpha=0.5)
+    sns.kdeplot(x=log_P[mask_LISA], ax=axs[0,1], fill=True, color='yellow',cut=0,clip=Pclip,alpha =0.5)
+    sns.kdeplot(y=M1, ax=axs[1,0], fill=True, color='blue',cut=0,clip=M1clip,alpha=0.5)
+    sns.kdeplot(y=M1[mask_LISA], ax=axs[1,0], fill=True, color='yellow',cut=0,clip=M1clip,alpha=0.5)
+    sns.kdeplot(y=M2, ax=axs[2,0], fill=True, color='blue',cut=0,clip=M2clip,alpha=0.5)
+    sns.kdeplot(y=M2[mask_LISA], ax=axs[2,0], fill=True, color='yellow',cut=0,clip=M2clip,alpha=0.5)
     axs[2, 0].set_ylabel(r'$M_2 [M_\odot]$')
     axs[1, 0].set_ylabel(r'$M_1 [M_\odot]$')
     if (limits):
@@ -92,7 +95,8 @@ def point_plot(M1,M2,log_P,log_tau,mask_LISA,title,limits=None,savepath='./'):
     # Top right: KDE plot of log_tau
     # Create the figure and grid for the subplots
     ax_new = fig.add_axes([0.6, 0.55, 0.3, 0.25])
-    sns.kdeplot(log_tau, ax=ax_new, fill=True, color='green',cut=0,clip=tclip)
+    sns.kdeplot(log_tau, ax=ax_new, fill=True, color='green',cut=0,clip=tclip.alpha=0.7)
+    sns.kdeplot(log_tau[mask_LISA], ax=ax_new, fill=True, color='yellow',cut=0,clip=tclip.alpha=0.7)
     ax_new.set_xlabel(r'$\log \tau$ [Myr]')
 
     # Show the plot
