@@ -448,11 +448,18 @@ class ImageView(QScrollArea):
             target_size = self.viewport().size()
             if target_size.width() <= 1 or target_size.height() <= 1:
                 return
+            dpr = self.devicePixelRatio()
+            from PySide6.QtCore import QSize
+            physical_size = QSize(
+                int(target_size.width() * dpr),
+                int(target_size.height() * dpr),
+            )
             scaled = self._pixmap.scaled(
-                target_size,
+                physical_size,
                 Qt.KeepAspectRatio,
                 Qt.SmoothTransformation,
             )
+            scaled.setDevicePixelRatio(dpr)
             self.label.setPixmap(scaled)
             self.label.resize(target_size)
         else:
