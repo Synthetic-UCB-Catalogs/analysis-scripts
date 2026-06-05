@@ -1,0 +1,30 @@
+To use the UCB_plot_comparator tool:
+
+PREP - FIRST TIME ONLY:
+1) Download the folder with the project plots, from the root of the structure (currently, Code_comparison_plots, made by Gijs @ https://drive.google.com/drive/folders/1BzY9tlZqoDMo4CQ9SqCc1WCUdNJIELNh?usp=drive_link) 
+
+2) Make and activate a new environment:
+python3 -m venv .venv
+source .venv/bin/activate
+
+3) Install the necessary python packages:
+pip install PySide6
+pip install pymupdf (optionally)
+
+TO RUN THE APP:
+1) Activate the environment:
+source .venv/bin/activate
+
+2) Run this (note, the second argument should point to the image folder):
+python ./ucb_plot_comparator.py ./Code_comparison_plots
+
+If the Ubuntu environment interferes, try calling:
+env \
+  -u LD_LIBRARY_PATH \
+  -u LD_PRELOAD \
+  -u QT_PLUGIN_PATH \
+  -u QML2_IMPORT_PATH \
+  -u QT_QPA_PLATFORM_PLUGIN_PATH \
+  -u PYTHONPATH \
+  .venv/bin/python ./ucb_plot_comparator.py ./Code_comparison_plots
+
