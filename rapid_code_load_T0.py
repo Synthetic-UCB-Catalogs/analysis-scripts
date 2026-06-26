@@ -109,7 +109,7 @@ def load_T0_data(ifilepath, code=None, **kwargs):
 
     #elif code in ["COMPAS", "COSMIC", "SeBa", "BSE"]:
     else:
-        with pd.HDFStore(ifilepath) as hdf_store:
+        with pd.HDFStore(ifilepath, mode="r") as hdf_store:
             header_info = hdf_store.get_storer('data').attrs.metadata
             dat = hdf_store.get('data')
 
@@ -241,13 +241,25 @@ def convert_COSMIC_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_file
     bn_merger = bcm.loc[bcm.bin_state == 1].bin_num.unique()
     
     # rename the columns that are easy to rename
-    dat = dat.rename(
-        columns={"tphys": "time", "mass_1": "mass1", "mass_2": "mass2", 
-                 "massc_1": "massHeCore1", "massc_2": "massHeCore2", 
-                 "porb": "period", "sep": "semiMajor", "ecc": "eccentricity",
-                 "teff_1": "Teff1", "teff_2": "Teff2",
-                 "rad_1": "radius1", "rad_2": "radius2",
-                 "bin_num": "UID"})
+    try:
+        dat = dat.rename(
+            columns={"tphys": "time", "mass_1": "mass1", "mass_2": "mass2", 
+                     "massc_1": "massHeCore1", "massc_2": "massHeCore2", 
+                     "porb": "period", "sep": "semiMajor", "ecc": "eccentricity",
+                     "teff_1": "Teff1", "teff_2": "Teff2",
+                     "rad_1": "radius1", "rad_2": "radius2",
+                     "bin_num": "UID"}, errors="raise" 
+        )
+    except KeyError: 
+        dat = dat.rename(
+            columns={"tphys": "time", "mass_1": "mass1", "mass_2": "mass2", 
+                     "porb": "period", "sep": "semiMajor", "ecc": "eccentricity",
+                     "teff_1": "Teff1", "teff_2": "Teff2",
+                     "rad_1": "radius1", "rad_2": "radius2",
+                     "bin_num": "UID"})
+        dat["massHeCore1"] = dat["massc_he_layer_1"] + dat["massc_co_layer_1"]
+        dat["massHeCore2"] = dat["massc_he_layer_2"] + dat["massc_co_layer_2"]
+        
     dat["radiusRL1"] = dat.radius1 / dat.RRLO_1
     dat["radiusRL2"] = dat.radius2 / dat.RRLO_2
 
@@ -427,7 +439,7 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
         header for dat
     """
     # load data
-    dat = pd.read_csv(ifilepath, sep="\s+",
+    dat = pd.read_csv(ifilepath, sep=r"\s+",
         names=["UID", "SID", "mass_transfer_type", "time", "semiMajor", "eccentricity",
                "stellar_indentity1", "star_type1", "mass1", "radius1", "Teff1", "massHeCore1",
                "stellar_indentity2", "star_type2", "mass2", "radius2", "Teff2", "massHeCore2"])
@@ -569,6 +581,34 @@ def convert_SeBa_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filena
     return dat # typically not needed, but possibly good for testing
 
 
+def had_uninterrupted_prior(grp, target_val, interrupt_vals):
+    """
+    Returns a boolean Series (same index as grp) where True means:
+      - `target_val` appeared in some prior row of the group, AND
+      - no value in `interrupt_vals` appeared in any row between
+        that occurrence and the current row.
+
+    Parameters
+    ----------
+    grp : pd.Series
+        A single group's column (from groupby.transform).
+    target_val : scalar
+        The value we're looking for a prior occurrence of.
+    interrupt_vals : set or list
+        Values that cancel/reset the "active" flag.
+    """
+    interrupt_vals = set(interrupt_vals)
+    result = pd.Series(False, index=grp.index)
+    active = False
+    for idx, val in grp.items():
+        result[idx] = active          # record state BEFORE this row
+        if val == target_val:
+            active = True             # activate on seeing target
+        elif val in interrupt_vals:
+            active = False            # reset on any interrupting value
+    return result
+
+
 def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filename="BSE_T0.hdf5"):
     """Read in BSE data and select at DWD formation
     
@@ -650,7 +690,7 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
             else:
                 raise Error("You have likely specified a non-standard BSE file; the columns should either be:\n UID, time, kstar_1, kstar_2, mass1, mass2, period, evol_type or UID, time, kstar_1, kstar_2, mass1, mass2, period, eccentricity, evol_type")
                     
-    dat = pd.read_csv(ifilepath, sep='\s+',
+    dat = pd.read_csv(ifilepath, sep=r'\s+',
         names=cols, skiprows=1, dtype=dtype_mapping
         )
 
@@ -719,47 +759,189 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     # for this project
     dat["event"] = np.zeros(len(dat))
     disruption_IDs = dat.loc[dat.evol_type == 11].ID
-    dat = dat.loc[~dat.evol_type.isin([11,12,13,14])]
+    dat = dat.loc[~dat.evol_type.isin([11,12,13,14,8])]
+    
+    dat.loc[(dat.evol_type == 2), "event"] = 1
 
     dat.loc[(dat.evol_type == 1), "event"] = 13
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() < dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_1.shift() > dat.kstar_1), "event"] = 11
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() < dat.kstar_2), "event"] = 12
     dat.loc[(dat.evol_type == 2) & (dat.kstar_2.shift() > dat.kstar_2), "event"] = 12
+    
+    
+    #First assign evol_type=3 events to event = 3
+    #Next, find 31's as the row where kstar_1 == kstar_2 and hydrogen rich
+    # or where kstar_1 > kstar_2 and kstar_1 is hydrogen rich (i.e. kstar_1 < 7)
     dat.loc[(dat.evol_type == 3), "event"] = 3
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == dat.kstar_2) & (dat.kstar_1.isin([121, 122, 123, 125, 1251, 1252])), "event"] = 31
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 > dat.kstar_2) & (dat.kstar_1 < 7), "event"] = 31
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 == 1) & (dat.kstar_2 == 1) & (dat.mass1 > dat.mass2), "event"] = 31
-
-    dat.loc[(dat.evol_type == 3) & (dat.kstar_1 < dat.kstar_2) & (dat.kstar_1 >= 7), "event"] = 32
-
     dat.loc[(dat.evol_type == 4), "event"] = 4
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 == dat.kstar_2) 
+        & (dat.kstar_1.isin([0,1, 2, 3, 4, 5, 6])), 
+        "event"
+    ] = 31
+    
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 > dat.kstar_2) 
+        & (dat.kstar_1 < 7), 
+        "event"
+    ] = 31
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 < dat.kstar_2) 
+        & (dat.kstar_2.isin([10,11,12, 13])), 
+        "event"
+    ] = 31
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 < dat.kstar_2) 
+        & (dat.kstar_1 < 7), 
+        "event"
+    ] = 31
+
+    # now check for evol_type = 4 following an event=31
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(1) == 31) &
+        (dat.ID.shift(1) == dat.ID),
+        "event",
+    ] = 41
+
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(2) == 31) &
+        (dat.ID.shift(2) == dat.ID),
+        "event",
+    ] = 41
+
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(3) == 31) &
+        (dat.ID.shift(3) == dat.ID),
+        "event",
+    ] = 41
+
+
+    # Next look for 32's as the row where kstar_2 < kstar_1 and hydrogen rich
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 >= 7)
+        & (dat.kstar_2 < 7),
+        "event"
+    ] = 32
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 > dat.kstar_2) 
+        & (dat.kstar_2.isin([7,8,9]))
+        & (dat.kstar_1.isin([10,11,12])), 
+        "event"
+    ] = 32
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_1 > dat.kstar_2) 
+        & (dat.kstar_2.isin([10,11]))
+        & (dat.kstar_1.isin([11,12])), 
+        "event"
+    ] = 32
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.mass1 > dat.mass2) 
+        & (dat.kstar_2.isin([10,11,12]))
+        & (dat.kstar_1.isin([10,11,12])), 
+        "event"
+    ] = 32
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_2.isin([7,8,9,10,11,12]))
+        & (dat.kstar_1.isin([13,14])), 
+        "event"
+    ] = 32
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.mass1 < dat.mass2) 
+        & (dat.kstar_2.isin([10,11,12]))
+        & (dat.kstar_1.isin([10,11,12])), 
+        "event"
+    ] = 31
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_2.isin([7,8,9])) 
+        & (dat.kstar_1.isin([7,8,9]))
+        & (dat.mass1 > dat.mass2), 
+        "event"
+    ] = 31
+
+    dat.loc[
+        (dat.evol_type == 3) 
+        & (dat.kstar_2.isin([7,8,9])) 
+        & (dat.kstar_1.isin([7,8,9]))
+        & (dat.mass1 < dat.mass2), 
+        "event"
+    ] = 32
+
+    # now check for evol_type = 4 following an event=32
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(1) == 32) &
+        (dat.ID.shift(1) == dat.ID),
+        "event",
+    ] = 42
+
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(2) == 32) &
+        (dat.ID.shift(2) == dat.ID),
+        "event",
+    ] = 42
+
+    dat.loc[
+        (dat.event == 4)        &
+        (dat.event.shift(3) == 32) &
+        (dat.ID.shift(3) == dat.ID),
+        "event",
+    ] = 42
+ 
     #maybe select 41 vs 42 based on kstar type?
     # set double core CEs
-    dat.loc[(dat.evol_type == 5), "event"] = 53
+    dat.loc[(dat.evol_type == 5), "event"] = 52
 
-    dat.loc[((dat.event == 53) & (dat.type1 == 123) & (dat.type2 == 123)), "event"] = 513
-    dat.loc[((dat.event == 53) & (dat.type1 == 124) & (dat.type2 == 123)), "event"] = 513
-    dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1251)), "event"] = 513
-    dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1252)), "event"] = 513
-    dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1252)), "event"] = 513
-    dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1251)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 123) & (dat.type2 == 123)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 124) & (dat.type2 == 123)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1251)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1252)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 1251) & (dat.type2 == 1252)), "event"] = 513
+    # dat.loc[((dat.event == 53) & (dat.type1 == 1252) & (dat.type2 == 1251)), "event"] = 513
     
     dat.loc[(dat.evol_type == 6), "event"] = 52
 
 
     dat.loc[(dat.evol_type == 7) & (dat.kstar_1 > dat.kstar_2), "event"] = 511
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1 < 7) & (dat.kstar_2 == 15), "event"] = 511
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.shift() < dat.kstar_1.shift()) & (dat.kstar_1.shift() >= 7), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([10,11,12])), "event"] = 512
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2.isin([10,11,12])) & (dat.kstar_1.isin([7,8,9])), "event"] = 513
+    dat.loc[(dat.evol_type == 7) & (dat.event.shift(1) == 32), "event"] = 512
 
-    # hacky catch for weird logging of CE
+    #hacky catch for weird logging of CE
     dat.loc[(dat.event == 512) & (dat.type1.isin([22, 23])) & (dat.type2.isin([22, 23])), "event"] = 43
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 <= 9), "event"] = 52
     dat.loc[(dat.evol_type == 7) & (dat.kstar_2 == 15) & (dat.kstar_1 == 15), "event"] = 52
-    dat.loc[(dat.evol_type == 7) & (dat.kstar_1.isin([7,8,9])) & (dat.kstar_2.isin([7,8,9])), "event"] = 43
+    dat.loc[(dat.evol_type == 7) & (dat.kstar_1.isin([7,8,9])) & (dat.kstar_2.isin([7,8,9])), "event"] = 53
 
     dat.loc[(dat.evol_type == 8), "event"] = 4
+    dat.loc[(dat.evol_type == 8) & (dat.event.shift() == 511), "event"] = 41
+    dat.loc[(dat.evol_type == 8) & (dat.event.shift() == 512), "event"] = 42
+    dat.loc[(dat.evol_type == 8) & (dat.event.shift() == 513), "event"] = 43
     dat.loc[(dat.evol_type == 9) & (dat.kstar_1 == 15), "event"] = 211
     dat.loc[(dat.evol_type == 9) & (dat.kstar_2 == 15), "event"] = 221
 
@@ -767,6 +949,9 @@ def convert_BSE_data_to_T0(ifilepath, metallicity, outputpath=None, hdf5_filenam
     dat.loc[(dat.evol_type == 10) & (dat.ID.isin(disruption_IDs)), "event"] = 83
     dat.loc[(dat.evol_type == 10) & ~(dat.ID.isin(disruption_IDs)) & (dat.period > 0), "event"] = 81
     dat.loc[(dat.evol_type == 10) & ~(dat.ID.isin(disruption_IDs)) & (dat.period == 0), "event"] = 84    
+
+    # catch truncated endings
+    dat.loc[(dat.kstar_1 == 15) & (dat.kstar_2 == 15) & (dat.evol_type == 7), "event"] = 85
 
     dat = dat.fillna(np.nan)
     dat = dat[["ID","UID","time","event",
