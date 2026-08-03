@@ -27,4 +27,9 @@ env \
   -u QT_QPA_PLATFORM_PLUGIN_PATH \
   -u PYTHONPATH \
   .venv/bin/python ./ucb_plot_comparator.py ./Code_comparison_plots
+  
+3) Some useful functions:
+-Mode toggle allows one to select several useful types of comparison
+-Once an area next to any toggle is selected, one can also toggle between the plots using the keyboard arrow keys
+-By pressing Ctrl, one gets a Zoom-in pane on both sides of the comparator
 

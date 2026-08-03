@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-UCB Plot Comparator v6
+UCB Plot Comparator v7
 ======================
 
 A small cross-platform PySide6 desktop application for interactively comparing
@@ -24,6 +24,7 @@ Main features
 - Retina/HiDPI-aware scaling to avoid blurred/smeared images on macOS.
 - Compact two-column selector layout with click-to-focus highlighting.
 - Optional first-page PDF rendering if PyMuPDF is installed.
+- Code selections are preserved across folders; unavailable combinations show a blank panel.
 
 Run
 ---
@@ -802,7 +803,12 @@ class ImageDisplay(QWidget):
         self.open_first_button.clicked.connect(self.open_first)
         self.open_folder_button.clicked.connect(self.open_folder)
 
-    def set_records(self, records: list[ImageRecord]) -> None:
+    def set_records(
+        self,
+        records: list[ImageRecord],
+        *,
+        empty_message: str = "No image selected",
+    ) -> None:
         self._records = list(records)
         self._clear_grid()
         self._tiles.clear()
@@ -814,10 +820,12 @@ class ImageDisplay(QWidget):
 
         if not records:
             self.path_line.clear()
-            msg = QLabel("No image selected")
+            msg = QLabel(empty_message)
             msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            msg.setWordWrap(True)
             msg.setFrameShape(QFrame.Shape.Box)
             msg.setMinimumSize(200, 200)
+            msg.setStyleSheet("padding: 18px; color: #666;")
             self.grid.addWidget(msg, 0, 0)
             return
 
@@ -1218,6 +1226,9 @@ class ImageSelectorPanel(QWidget):
         self.index: ImageIndex | None = None
         self._updating = False
         self._active_combo: QComboBox | None = None
+        # Codes genuinely available in the current folder/prefix.  The Code
+        # combo may additionally contain one preserved unavailable selection.
+        self._available_codes_current: set[str] = set()
 
         self.level_labels: list[ClickableSelectorLabel] = []
         self.level_combos: list[SteppableComboBox] = []
@@ -1257,6 +1268,7 @@ class ImageSelectorPanel(QWidget):
         self.selector_box.setStyleSheet(
             "QComboBox { min-height: 20px; max-height: 22px; } "
             "QComboBox[activeSelector=\"true\"] { border: 2px solid #3478f6; background: #eef4ff; } "
+            "QComboBox[selectionUnavailable=\"true\"] { border: 2px solid #d58512; background: #fff4df; } "
             "QToolButton { min-width: 17px; max-width: 17px; min-height: 17px; max-height: 17px; padding: 0px; } "
             "QPushButton { min-height: 20px; max-height: 23px; padding-left: 6px; padding-right: 6px; } "
             "QLabel { margin: 0px; } "
@@ -1479,23 +1491,94 @@ class ImageSelectorPanel(QWidget):
         combo: QComboBox,
         items: list[tuple[str, object]],
         preferred_data: object | None = None,
-    ) -> None:
+        *,
+        preserve_missing: bool = False,
+        missing_text: str | None = None,
+    ) -> bool:
+        """Refill a selector and optionally preserve an unavailable choice.
+
+        Returns True when ``preferred_data`` was present in the supplied items.
+        When ``preserve_missing`` is True, a missing preferred value is retained
+        as an extra first entry instead of silently selecting the first available
+        item.  This is used for the Code selector.
+        """
+        preferred_found = False
+
         with QSignalBlocker(combo):
             combo.clear()
             for text, data in items:
                 combo.addItem(text, data)
 
-            if not items:
-                combo.setEnabled(False)
-                return
-
-            combo.setEnabled(True)
             if preferred_data is not None:
                 for i in range(combo.count()):
                     if combo.itemData(i) == preferred_data:
                         combo.setCurrentIndex(i)
-                        return
-            combo.setCurrentIndex(0)
+                        preferred_found = True
+                        break
+
+            if not preferred_found and preserve_missing and preferred_data is not None:
+                label = missing_text or str(preferred_data)
+                combo.insertItem(0, label, preferred_data)
+                combo.setCurrentIndex(0)
+
+            if combo.count() == 0:
+                combo.setEnabled(False)
+                return False
+
+            combo.setEnabled(True)
+            if combo.currentIndex() < 0:
+                combo.setCurrentIndex(0)
+
+        return preferred_found
+
+    def _set_unavailable_style(self, combo: QComboBox, unavailable: bool) -> None:
+        combo.setProperty("selectionUnavailable", unavailable)
+        self._repolish(combo)
+
+    def _preserve_disabled_combo(self, combo: QComboBox, placeholder: str) -> None:
+        """Keep the current visible selection while disabling the combo."""
+        current_data = combo.currentData()
+        current_text = combo.currentText().strip()
+
+        if current_data is not None:
+            self._set_combo_items(
+                combo,
+                [(current_text or str(current_data), current_data)],
+                current_data,
+            )
+        else:
+            self._set_combo_items(combo, [(placeholder, None)])
+        combo.setEnabled(False)
+
+    def _available_codes_for_context(
+        self,
+        context: tuple[str, ...],
+        mode: str,
+    ) -> list[str]:
+        if self.index is None:
+            return []
+        if mode == self.MODE_ALL_VARIATIONS:
+            return self.index.codes_for_variation_prefix(context)
+        return self.index.codes(context)
+
+    def _selected_code_is_available(self) -> bool:
+        code = self.code_combo.currentData()
+        return code is not None and str(code) in self._available_codes_current
+
+    def _show_unavailable_code_panel(self) -> None:
+        code = self.code_combo.currentData()
+        context = self.selected_context_folder_or_prefix()
+        context_text = " / ".join(context) if context else "<no folder selected>"
+        code_text = str(code) if code is not None else "<no code selected>"
+        self.display.set_records(
+            [],
+            empty_message=(
+                f"No plots are available for code '{code_text}' in:\n"
+                f"{context_text}\n\n"
+                "The code selection has been preserved. Choose another folder "
+                "or explicitly select a different code."
+            ),
+        )
 
     def _current_level_values(self) -> list[object | None]:
         return [combo.currentData() for combo in self.level_combos]
@@ -1614,17 +1697,39 @@ class ImageSelectorPanel(QWidget):
         mode = self.mode()
 
         if context is None:
-            self._set_combo_items(self.code_combo, [])
+            self._available_codes_current = set()
+            self._set_combo_items(
+                self.code_combo,
+                [],
+                old_code,
+                preserve_missing=old_code is not None,
+                missing_text=(f"{old_code} — unavailable here" if old_code is not None else None),
+            )
+            self.code_combo.setEnabled(False)
+            self._set_unavailable_style(self.code_combo, old_code is not None)
             self._refresh_subtypes()
             return
 
-        if mode == self.MODE_ALL_VARIATIONS:
-            codes = self.index.codes_for_variation_prefix(context)
-        else:
-            codes = self.index.codes(context)
+        codes = self._available_codes_for_context(context, mode)
+        self._available_codes_current = set(codes)
+        old_code_missing = old_code is not None and str(old_code) not in self._available_codes_current
 
-        self._set_combo_items(self.code_combo, [(code, code) for code in codes], old_code)
-        self.code_combo.setEnabled(mode != self.MODE_ALL_CODES and bool(codes))
+        self._set_combo_items(
+            self.code_combo,
+            [(code, code) for code in codes],
+            old_code,
+            preserve_missing=old_code_missing,
+            missing_text=(
+                f"{old_code} — unavailable here"
+                if old_code_missing
+                else None
+            ),
+        )
+        self.code_combo.setEnabled(mode != self.MODE_ALL_CODES and bool(codes or old_code_missing))
+        self._set_unavailable_style(
+            self.code_combo,
+            mode != self.MODE_ALL_CODES and not self._selected_code_is_available(),
+        )
         self._refresh_subtypes()
 
     def _refresh_subtypes(self) -> None:
@@ -1636,18 +1741,29 @@ class ImageSelectorPanel(QWidget):
         mode = self.mode()
 
         if context is None:
-            self._set_combo_items(self.subtype_combo, [])
-            self._refresh_variants()
+            self._preserve_disabled_combo(self.subtype_combo, "— unavailable —")
+            self._preserve_disabled_combo(self.variant_combo, "— unavailable —")
+            if self.code_combo.currentData() is not None:
+                self._show_unavailable_code_panel()
+            else:
+                self.display.set_records([])
             return
 
         if mode == self.MODE_ALL_TYPES:
+            # Mode 3 still depends on a valid selected code.  If the preserved
+            # code is unavailable in this folder, keep it and show a blank pane.
+            if not self._selected_code_is_available():
+                self._preserve_disabled_combo(self.subtype_combo, "— all figure types —")
+                self._preserve_disabled_combo(self.variant_combo, "— unavailable —")
+                self._show_unavailable_code_panel()
+                return
             self._set_combo_items(self.subtype_combo, [("— all figure types —", None)])
             self.subtype_combo.setEnabled(False)
             self._refresh_variants()
             return
 
         if mode == self.MODE_ALL_CODES:
-            # context is a concrete folder tuple here.
+            # Code is intentionally ignored in mode 2.
             subtypes = self.index.subtypes_for_folder(context)
         else:
             code = self.code_combo.currentData()
@@ -1655,6 +1771,16 @@ class ImageSelectorPanel(QWidget):
                 self._set_combo_items(self.subtype_combo, [])
                 self._refresh_variants()
                 return
+
+            if not self._selected_code_is_available():
+                # Crucial v7 behavior: do not silently select another code.
+                # Keep Type/Var visible but disabled so returning to a compatible
+                # folder can restore the prior selection.
+                self._preserve_disabled_combo(self.subtype_combo, "— unavailable for this code —")
+                self._preserve_disabled_combo(self.variant_combo, "— unavailable —")
+                self._show_unavailable_code_panel()
+                return
+
             if mode == self.MODE_ALL_VARIATIONS:
                 subtypes = self.index.subtypes_for_variation_prefix(context, str(code))
             else:
@@ -1844,6 +1970,10 @@ class ImageSelectorPanel(QWidget):
     def _on_code_changed(self, _index: int | None = None) -> None:
         if self._updating:
             return
+        self._set_unavailable_style(
+            self.code_combo,
+            self.mode() != self.MODE_ALL_CODES and not self._selected_code_is_available(),
+        )
         self._refresh_subtypes()
 
     def _on_subtype_changed(self, _index: int | None = None) -> None:
